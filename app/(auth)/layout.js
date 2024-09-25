@@ -1,4 +1,4 @@
-import { Car } from "lucide-react";
+import { CarFront } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -8,16 +8,20 @@ export const metadata = {
 
 export default function AuthLayout({ children }) {
   return (
-    <div className="min-h-screen overflow-hidden">
-      <div className="p-8">
-        <Link href="/">
-          <span className="ml-4 inline-block animate-bounce text-teal-400">
-            <Car className="h-12 w-12 transform rotate-12" />
-          </span>
-        </Link>
-      </div>
-
-      {children}
+    <div>
+      <header className="sticky top-0 z-50 w-full bg-teal-500 shadow-md ">
+        <div className="container mx-auto flex h-16 items-center justify-center px-4">
+          <Link href="/" className="flex items-center space-x-2">
+            <h1 className="flex items-center text-2xl font-bold text-white font-yeseva">
+              CarHop
+              <span className="ml-2 inline-block animate-bounce">
+                <CarFront className="h-6 w-6 transform rotate-12" />
+              </span>
+            </h1>
+          </Link>
+        </div>
+      </header>
+      <div className="py-6">{children}</div>
     </div>
   );
 }

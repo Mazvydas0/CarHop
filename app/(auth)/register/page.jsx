@@ -91,20 +91,22 @@ export default function RegisterFormComponent() {
           </div>
 
           <div>
-            <Button
-              type="submit"
-              className="group relative flex w-full justify-center bg-teal-400 hover:bg-teal-500"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                "Loading..."
-              ) : (
-                <>
-                  Sign up
-                  <Car className="ml-2 h-5 w-5 animate-bounce" />
-                </>
-              )}
-            </Button>
+            <Link href="/home">
+              <Button
+                type="submit"
+                className="group relative flex w-full justify-center bg-teal-400 hover:bg-teal-500"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  "Loading..."
+                ) : (
+                  <>
+                    Sign up
+                    <Car className="ml-2 h-5 w-5 animate-bounce" />
+                  </>
+                )}
+              </Button>
+            </Link>
           </div>
         </form>
       </div>

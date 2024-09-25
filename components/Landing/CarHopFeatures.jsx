@@ -15,9 +15,9 @@ export function CarHopFeatures() {
     <section className="relative bg-gray-100">
       <RoadAnimationComponent />
 
-      <div className="container mx-auto px-4 mt-12">
+      <div className="container mx-auto px-4 py-12">
         <h2 className="mb-12 text-center text-3xl font-bold text-gray-800">
-          Choose Your CarHop Adventure
+          Choose Your CarHop Adventure !
         </h2>
 
         <div className="grid gap-8 md:grid-cols-3">
