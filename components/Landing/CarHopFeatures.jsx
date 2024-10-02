@@ -12,11 +12,11 @@ import { RoadAnimationComponent } from "./RoadAnimation";
 
 export function CarHopFeatures() {
   return (
-    <section className="relative bg-gray-100">
+    <section className="relative h-full bg-gray-100">
       <RoadAnimationComponent />
 
       <div className="container mx-auto px-4 py-12">
-        <h2 className="mb-12 text-center text-3xl font-bold text-gray-800">
+        <h2 className="mb-[50px] text-center text-3xl font-bold text-gray-800">
           Choose Your CarHop Adventure !
         </h2>
 

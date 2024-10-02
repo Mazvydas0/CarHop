@@ -15,7 +15,7 @@ import Link from "next/link";
 
 export function CarHopHero() {
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-gradient-to-br from-teal-400 to-blue-500">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-teal-400 to-blue-500">
       <Image
         src="/images/carHeroImage.jpg"
         alt="People riding in a car"

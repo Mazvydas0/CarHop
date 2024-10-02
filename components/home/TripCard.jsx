@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, MapPin, Star } from "lucide-react";
 import Image from "next/image";
 export default function TripCard({ trip }) {
   return (
-    <Card key={trip.id} className="overflow-hidden">
+    <Card key={trip.id} className="overflow-hidden my-1">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">

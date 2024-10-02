@@ -1,16 +1,24 @@
-'use client'
+"use client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
-import { CarFront, Mail, Plus, Search, Settings, User, LogOut } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
+} from "@/components/ui/DropdownMenu";
+import {
+  CarFront,
+  Mail,
+  Plus,
+  Search,
+  Settings,
+  User,
+  LogOut,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export function Header() {
   return (
@@ -26,10 +34,12 @@ export function Header() {
         </Link>
 
         <div className="flex items-center space-x-4">
-          <Button variant="secondary" size="sm" className="hidden sm:flex">
-            <Plus className="mr-2 h-4 w-4" />
-            Add a Trip
-          </Button>
+          <Link href={`/home/addTrip`}>
+            <Button variant="secondary" size="sm" className="hidden sm:flex">
+              <Plus className="mr-2 h-4 w-4" />
+              Add a Trip
+            </Button>
+          </Link>
           <Button variant="secondary" size="sm" className="hidden sm:flex">
             <Search className="mr-2 h-4 w-4" />
             Search a Trip
