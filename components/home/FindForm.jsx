@@ -7,7 +7,7 @@ import { Calendar, Clock } from "lucide-react";
 
 export default function FindForm() {
   return (
-    <Card className="p-6">
+    <Card className="p-6 rounded-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-teal-600">
           Find a Ride

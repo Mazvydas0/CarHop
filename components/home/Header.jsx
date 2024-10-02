@@ -40,12 +40,14 @@ export function Header() {
               Add a Trip
             </Button>
           </Link>
-          <Button variant="secondary" size="sm" className="hidden sm:flex">
-            <Search className="mr-2 h-4 w-4" />
-            Search a Trip
-          </Button>
+          <Link href={`/home/findTrip`}>
+            <Button variant="secondary" size="sm" className="hidden sm:flex">
+              <Search className="mr-2 h-4 w-4" />
+              Search a Trip
+            </Button>
+          </Link>
 
-          <Link href="/messages" className="text-white hover:text-teal-100">
+          <Link href="/home/inbox" className="text-white hover:text-teal-100">
             <Mail className="h-6 w-6" />
           </Link>
 

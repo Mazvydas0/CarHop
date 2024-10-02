@@ -7,9 +7,12 @@ export default function HomePage() {
   return (
     <div className="container mx-auto p-4">
       <div className="grid gap-8 md:grid-cols-[1fr,2fr] pt-4">
-        <FindForm />
-
-        <TripList upcomingTrips={upcomingTrips} />
+        <div>
+          <FindForm />
+        </div>
+        <div>
+          <TripList upcomingTrips={upcomingTrips} />
+        </div>
       </div>
     </div>
   );

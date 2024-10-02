@@ -22,9 +22,7 @@ export default function Modal({ children }) {
       onClose={router.back}
       className="backdrop:backdrop-blur-sm rounded-lg"
     >
-      <div className="">
-        {children}
-      </div>
+      <div>{children}</div>
     </dialog>
   );
 }
