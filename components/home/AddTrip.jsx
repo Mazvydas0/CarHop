@@ -30,9 +30,7 @@ export default function AddTrip() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you would typically send the data to your backend
     console.log("Trip data submitted:", tripData);
-    // Reset form or show success message
   };
 
   return (
