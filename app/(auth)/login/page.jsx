@@ -20,8 +20,8 @@ export default function LoginFormComponent() {
   }
 
   return (
-    <div className="container mx-auto flex h-full items-center justify-center">
-      <div className="w-full max-w-md space-y-8">
+    <div className="container mx-auto flex h-full items-center justify-center ">
+      <div className="w-full max-w-md space-y-8 p-4 rounded-xl border bg-white shadow">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
             Welcome to CarHop

@@ -39,9 +39,21 @@ export default function FindForm() {
               </div>
             </div>
           </div>
-          <Button className="w-full bg-teal-500 hover:bg-teal-600">
-            Search Rides
-          </Button>
+          <div className="flex justify-between">
+            <Button
+              type="submit"
+              className="bg-teal-500 hover:bg-teal-600 w-[45%]"
+            >
+              Search Rides
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-[45%]"
+            >
+              Remove Filters
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
