@@ -12,6 +12,7 @@ import {
   CaravanIcon,
 } from "lucide-react";
 import Link from "next/link";
+import MetaButton from "../metamask/MetaButton";
 
 export function CarHopHero() {
   return (
@@ -24,15 +25,7 @@ export function CarHopHero() {
         className="opacity-50"
       />
       <div className="absolute right-4 top-4 z-10">
-        <Link href="/register">
-          <Button
-            variant="outline"
-            className="bg-white/10 text-white hover:bg-white/20"
-          >
-            <LogIn className="mr-2 h-4 w-4" />
-            Register
-          </Button>
-        </Link>
+        <MetaButton/>
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
         <h1 className="mb-8 flex items-center text-6xl font-bold text-white drop-shadow-lg font-yeseva">

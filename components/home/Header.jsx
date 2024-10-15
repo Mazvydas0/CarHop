@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import MetaButton from "../metamask/MetaButton";
 
 export function Header() {
   return (
@@ -68,6 +69,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center space-x-4">
+        <MetaButton/>
           <Link
             href="/home/inbox"
             className="text-white hover:text-teal-100 relative"

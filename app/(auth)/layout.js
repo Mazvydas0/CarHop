@@ -1,5 +1,6 @@
 import { CarFront } from "lucide-react";
 import Link from "next/link";
+import MetaButton from "@/components/metamask/MetaButton";
 
 export const metadata = {
   title: "Create Next App",
@@ -21,6 +22,8 @@ export default function AuthLayout({ children }) {
           </Link>
         </div>
       </header>
+
+      <MetaButton />
       <div className="py-6">{children}</div>
     </div>
   );
