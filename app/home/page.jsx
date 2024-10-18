@@ -1,60 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { ethers } from "ethers";
 import { Button } from "@/components/ui/Button";
 import FindForm from "@/components/home/FindForm";
 import TripList from "@/components/home/TripList";
 import { upcomingTrips } from "@/utils/upcomingTrips";
-
-const contractABI = [
-  "event LogMessage(string message)",
-  "function logMessage(string memory _message) public",
-  "function getMessageHash(string memory _message) public pure returns (bytes32)",
-];
-
-const contractAddress = "0xfecd12253D5546F0FF36c0aA16BBe3997C457FD2";
+import { fetchLogs } from "@/lib/utils";
 
 export default function HomePage() {
   const [logs, setLogs] = useState([]);
-
-  // const fetchLogs = async () => {
-  //   try {
-  //     const provider = new ethers.JsonRpcProvider(
-  //       "https://polygon-amoy.g.alchemy.com/v2/vUYz0ErAPYMDWwowHR30m3aVdnXeZD13"
-  //     );
-
-  //     // Create a contract instance
-  //     const contract = new ethers.Contract(
-  //       contractAddress,
-  //       contractABI,
-  //       provider
-  //     );
-
-  //     // Fetch past events
-  //     const filter = contract.filters.LogMessage();
-  //     const events = await contract.queryFilter(filter);
-
-  //     // Process and set the logs
-  //     const processedLogs = events.map((event) => ({
-  //       message: event.args.message,
-  //       blockNumber: event.blockNumber,
-  //       transactionHash: event.transactionHash,
-  //     }));
-
-  //     setLogs(processedLogs);
-  //   } catch (error) {
-  //     console.error("Error fetching logs:", error);
-  //     setLogs([{ message: "Error fetching logs. Check console for details." }]);
-  //   }
-  // };
-
-  const fetchLogs = async () => {
-    await fetch('/api/fetchLogs', {
-      method: "GET",
-      
-    })
-  }
+  const handleFetch = async () => {
+    try {
+      const fetchedLogs = await fetchLogs();
+      setLogs(fetchedLogs);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -66,7 +28,7 @@ export default function HomePage() {
           <TripList upcomingTrips={upcomingTrips} />
         </div>
       </div>
-      <Button variant="secondary" onClick={fetchLogs}>
+      <Button variant="secondary" onClick={handleFetch}>
         Press here to see log
       </Button>
       {logs.length > 0 && (

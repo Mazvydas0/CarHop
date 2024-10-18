@@ -30,7 +30,6 @@ export default function AddTrip() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Trip data submitted:", tripData);
   };
 
   return (

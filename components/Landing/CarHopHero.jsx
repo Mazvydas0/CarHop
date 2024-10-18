@@ -40,13 +40,13 @@ export function CarHopHero() {
         </p>
 
         <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-          <Link href="/login">
+          <Link href="/home">
             <Button size="lg" className="bg-teal-500 hover:bg-teal-600">
               <Car className="mr-2 h-5 w-5" />
               Find a Ride
             </Button>
           </Link>
-          <Link href='/login'>
+          <Link href='/home'>
             <Button
               size="lg"
               variant="outline"

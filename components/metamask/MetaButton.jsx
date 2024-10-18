@@ -2,14 +2,14 @@
 
 import SvgMetamask from "./SvgMetamask";
 import { Button } from "../ui/button";
-import { useState } from "react";
-import { useSDK, MetaMaskProvider } from "@metamask/sdk-react";
+import { MetaMaskProvider } from "@metamask/sdk-react";
 import { formatAddress } from "../../lib/utils";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { useMetaMaskWallet } from "@/hooks/useMetaMaskWallet";
 
 // Modal bubble component for "Check MetaMask extension"
 const BubbleMessage = ({ message }) => {
@@ -21,32 +21,21 @@ const BubbleMessage = ({ message }) => {
 };
 
 export const ConnectWalletButton = () => {
-  const { sdk, connected, connecting, account } = useSDK();
-  const [showBubble, setShowBubble] = useState(false);
-
-  const connect = async () => {
-    try {
-      setShowBubble(true); // Show the bubble message when trying to connect
-      await sdk?.connect();
-      setTimeout(() => setShowBubble(false), 3000); // Hide the bubble after 3 seconds
-    } catch (err) {
-      console.warn(`No accounts found`, err);
-      setShowBubble(false); // Hide bubble if there is an error
-    }
-  };
-
-  const disconnect = () => {
-    if (sdk) {
-      sdk.terminate();
-    }
-  };
+  const {
+    connect,
+    disconnect,
+    currentAccount,
+    connected,
+    connecting,
+    showBubble,
+  } = useMetaMaskWallet();
 
   return (
     <div className="relative">
-      {connected && account ? (
+      {connected && currentAccount ? (
         <Popover>
           <PopoverTrigger>
-            <Button variant="secondary">{formatAddress(account)}</Button>
+            <Button variant="secondary">{formatAddress(currentAccount)}</Button>
           </PopoverTrigger>
           <PopoverContent className="mt-2 w-44 bg-gray-100 border rounded-md shadow-lg right-0 z-10 top-10">
             <button
@@ -70,9 +59,6 @@ export const ConnectWalletButton = () => {
 };
 
 export const MetaButton = () => {
-  const host =
-    typeof window !== "undefined" ? window.location.host : "defaultHost";
-
   const sdkOptions = {
     logging: { developerMode: false },
     checkInstallationImmediately: false,
