@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,7 +83,7 @@ export function Header() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="relative h-8 w-8 rounded-full">
+              <Button className="relative h-8 w-8 rounded-full">
                 <Image
                   src="/images/ProfilePic.jpg"
                   alt="User profile"
@@ -91,7 +91,7 @@ export function Header() {
                   height={32}
                   className="rounded-full"
                 />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuItem asChild>

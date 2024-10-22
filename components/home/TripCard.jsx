@@ -1,11 +1,14 @@
 "use client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { ArrowRight, Calendar, MapPin, Star } from "lucide-react";
 import Image from "next/image";
 
 export default function TripCard({ trip }) {
   return (
-    <Card key={trip.id} className="overflow-hidden my-1 hover:border-teal-300 hover:border-2 hover:shadow-xl">
+    <Card
+      key={trip.id}
+      className="overflow-hidden my-1 hover:border-teal-300 hover:border-2 hover:shadow-xl"
+    >
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">

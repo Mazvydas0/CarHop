@@ -5,9 +5,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/Card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ import {
   Rocket,
 } from "lucide-react";
 import FeedLegend from "./FeedLegend";
+import Image from "next/image";
 
 const feedData = [
   {
@@ -97,7 +98,10 @@ export default function Feed() {
                           <Avatar>
                             <AvatarImage src={post.avatar} alt={post.author} />
                             <AvatarFallback>
-                              <img src="/images/noProfile.png" />
+                              <Image
+                                src="/images/noProfile.png"
+                                alt="no profile picture"
+                              />
                             </AvatarFallback>
                           </Avatar>
                           <div>

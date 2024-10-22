@@ -1,7 +1,7 @@
 "use client";
 
 import SvgMetamask from "./SvgMetamask";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import { MetaMaskProvider } from "@metamask/sdk-react";
 import { formatAddress } from "../../lib/utils";
 import {
@@ -38,12 +38,12 @@ export const ConnectWalletButton = () => {
             <Button variant="secondary">{formatAddress(currentAccount)}</Button>
           </PopoverTrigger>
           <PopoverContent className="mt-2 w-44 bg-gray-100 border rounded-md shadow-lg right-0 z-10 top-10">
-            <button
+            <Button
               onClick={disconnect}
               className="block w-full pl-2 pr-4 py-2 text-left text-[#F05252] hover:bg-gray-200"
             >
               Disconnect
-            </button>
+            </Button>
           </PopoverContent>
         </Popover>
       ) : (

@@ -35,10 +35,10 @@ export async function GET(request) {
     }));
 
     // Respond with processed logs as JSON
-    return Response({logs: processedLogs})
+    return new Response({logs: processedLogs})
   } catch (error) {
     console.error("Error fetching logs:", error);
-    return Response( {message: "Error fetching logs"} )
+    return new Response( {message: "Error fetching logs"} )
    
   }
 }

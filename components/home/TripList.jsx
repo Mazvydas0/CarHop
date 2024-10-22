@@ -8,7 +8,7 @@ export default function TripList({ upcomingTrips }) {
     <div>
       <h2 className="text-2xl pb-4 font-semibold text-teal-600">Upcoming Trips</h2>
       {upcomingTrips.map((trip) => (
-        <Link href={`/home/trip/${trip.id}`}>
+        <Link key={trip.id} href={`/home/trip/${trip.id}`}>
           <TripCard trip={trip} />
         </Link>
       ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { chats } from "@/utils/Chats";
@@ -14,7 +14,7 @@ export function Inbox() {
         <CardContent className="p-0">
           <ScrollArea className="h-[70vh]">
             {chats.map((chat) => (
-              <Link href={`/home/inbox/${chat.id}`}>
+              <Link key={chat.id} href={`/home/inbox/${chat.id}`}>
                 <div
                   key={chat.id}
                   className="flex items-center space-x-4 p-4 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"

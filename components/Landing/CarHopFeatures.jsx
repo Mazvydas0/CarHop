@@ -46,7 +46,7 @@ export function CarHopFeatures() {
             <CardContent>
               <CardDescription className="text-blue-700">
                 Take the wheel and earn! Offer rides, choose your schedule, and
-                make money while helping others get around. It's that easy!
+                make money while helping others get around. It&apos;s that easy!
               </CardDescription>
             </CardContent>
           </Card>
@@ -61,8 +61,8 @@ export function CarHopFeatures() {
             <CardContent>
               <CardDescription className="text-blue-700">
                 Need to send something? Turn your item into a traveler! Our
-                drivers can deliver your packages safely and quickly. It's like
-                hitchhiking for your stuff!
+                drivers can deliver your packages safely and quickly. It&apos;s
+                like hitchhiking for your stuff!
               </CardDescription>
             </CardContent>
           </Card>

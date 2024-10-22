@@ -9,6 +9,8 @@ import { fetchLogs } from "@/lib/utils";
 
 export default function HomePage() {
   const [logs, setLogs] = useState([]);
+
+  const contractAddress = "0xfecd12253D5546F0FF36c0aA16BBe3997C457FD2";
   const handleFetch = async () => {
     try {
       const fetchedLogs = await fetchLogs();
