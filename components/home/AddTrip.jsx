@@ -10,8 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import { MapPin, Calendar, Clock, DollarSign } from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
