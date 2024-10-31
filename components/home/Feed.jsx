@@ -101,6 +101,8 @@ export default function Feed() {
                               <Image
                                 src="/images/noProfile.png"
                                 alt="no profile picture"
+                                width={40}
+                                height={40}
                               />
                             </AvatarFallback>
                           </Avatar>
@@ -165,3 +167,4 @@ export default function Feed() {
     </div>
   );
 }
+

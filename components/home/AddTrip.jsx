@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Calendar, Clock, DollarSign } from "lucide-react";
-import { tripContractAbi } from "@/utils/TripContractAbi";
+import { tripContractAbi } from "@/lib/TripContractAbi";
 
 const CONTRACT_ADDRESS = "0xD76c37c09C7C01A128e08eC45857822b0C340492";
 const CONTRACT_ABI = tripContractAbi;
@@ -194,7 +194,7 @@ export default function AddTrip() {
           )}
           {txHash && (
             <div className="p-3 text-sm text-green-500 bg-green-100 rounded-md">
-              Transaction submitted: {txHash}
+              Transaction submitted: {txHash.slice(0, 15)}...
             </div>
           )}
           {tripDetails && (

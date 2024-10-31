@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { chats } from "@/utils/Chats";
+import { chats } from "@/lib/Chats";
 import Link from "next/link";
 
 export function Inbox() {

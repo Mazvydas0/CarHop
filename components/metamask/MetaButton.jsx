@@ -3,7 +3,7 @@
 import SvgMetamask from "./SvgMetamask";
 import { Button } from "../ui/Button";
 import { MetaMaskProvider } from "@metamask/sdk-react";
-import { formatAddress } from "../../lib/utils";
+import { formatAddress } from "../../utils/utils";
 import {
   Popover,
   PopoverTrigger,
