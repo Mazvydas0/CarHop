@@ -33,10 +33,18 @@ export default function TripCard({ trip }) {
           <div className="text-right">
             <div className="text-sm text-gray-500">
               <Calendar className="mr-1 inline-block h-4 w-4" />
-              {/* {trip.date} */}
-              pick up date
+              {trip.pickupTime.toLocaleString("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })}
             </div>
-            <div className="text-lg font-bold text-teal-600">ETH {trip.price}</div>
+            <div className="text-lg font-bold text-teal-600">
+              ETH {trip.price}
+            </div>
             <div className="text-sm text-gray-500">
               <span className="mr-1">Available seats:</span>
               <span className="font-bold">{trip.availableSeats}</span>

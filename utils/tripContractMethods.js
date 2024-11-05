@@ -23,11 +23,16 @@ export const fetchAllTrips = async (provider) => {
     for (let i = 1; i <= tripCount; i++) {
       try {
         const tripDetails = await tripContract.getTripDetails(i);
+        const tripSchedule = await tripContract.getTripSchedule(i);
+        const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
+        const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
 
         const formattedTripDetails = {
           tripId: i.toString(),
           pickupLocation: tripDetails.pickupLocation,
           dropoffLocation: tripDetails.dropoffLocation,
+          pickupTime: pickupTime,
+          dropoffTime: dropoffTime,
           price: ethers.formatEther(tripDetails.price),
           availableSeats: tripDetails.availableSeats.toString(),
           completed: tripDetails.completed,
@@ -57,14 +62,22 @@ export const fetchOneTrip = async (provider, id) => {
     );
 
     const tripDetails = await tripContract.getTripDetails(id);
+    const tripSchedule = await tripContract.getTripSchedule(id);
+    const escrowAmount = await tripContract.escrow(id);
+    const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
+    const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
 
     const formattedTripDetails = {
       tripId: id,
       pickupLocation: tripDetails.pickupLocation,
       dropoffLocation: tripDetails.dropoffLocation,
+      pickupTime: pickupTime,
+      dropoffTime: dropoffTime,
       price: ethers.formatEther(tripDetails.price),
       availableSeats: tripDetails.availableSeats.toString(),
       completed: tripDetails.completed,
+      isPaid: escrowAmount > 0, // check if there are funds in escrow
+      escrowAmount: ethers.formatEther(escrowAmount),
     };
 
     console.log("Fetched one trip details:", formattedTripDetails);
@@ -152,6 +165,61 @@ export const bookTrip = async (provider, tripId, price) => {
 
     // Log the full error for debugging
     console.error("Error booking trip:", error);
+    throw error;
+  }
+};
+
+// Function to complete a trip
+export const completeTrip = async (tripId, provider) => {
+  try {
+    if (!provider) {
+      throw new Error("Provider is required");
+    }
+
+    // Request accounts
+    if (typeof window.ethereum !== "undefined") {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+    } else {
+      throw new Error("MetaMask is not installed.");
+    }
+
+    const signer = await provider.getSigner();
+    const tripContract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      CONTRACT_ABI,
+      signer
+    );
+
+    // Check escrow balance first
+    const escrowAmount = await tripContract.escrow(tripId);
+    if (escrowAmount.toString() === "0") {
+      throw new Error("Trip has not been paid for yet");
+    }
+
+    // Get trip schedule to check dropoff time
+    const schedule = await tripContract.getTripSchedule(tripId);
+    const currentTime = Math.floor(Date.now() / 1000); // Convert to Unix timestamp
+
+    if (currentTime < Number(schedule[1])) {
+      // schedule[1] is dropoffTime
+      throw new Error("Cannot complete trip before dropoff time");
+    }
+
+    const tx = await tripContract.completeTrip(tripId);
+    const receipt = await tx.wait();
+
+    return {
+      success: true,
+      tripId,
+      transactionHash: receipt.transactionHash,
+    };
+  } catch (error) {
+    if (error.message.includes("No funds in escrow")) {
+      throw new Error("Trip has not been paid for yet");
+    }
+    if (error.message.includes("Trip not yet complete")) {
+      throw new Error("Cannot complete trip before dropoff time");
+    }
     throw error;
   }
 };

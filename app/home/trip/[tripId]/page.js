@@ -14,8 +14,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
-import { fetchOneTrip, bookTrip } from "@/utils/tripContractMethods";
-
+import { fetchOneTrip, bookTrip, completeTrip } from "@/utils/tripContractMethods";
 
 export default function TripDetailsPage() {
   const { tripId } = useParams();
@@ -27,6 +26,11 @@ export default function TripDetailsPage() {
     loading: false,
     error: null,
   });
+  const [completeStatus, setCompleteStatus] = useState({
+    loading: false,
+    error: null,
+  });
+  const [showCompleteButton, setShowCompleteButton] = useState(false);
 
   // Initialize provider
   useEffect(() => {
@@ -44,6 +48,13 @@ export default function TripDetailsPage() {
         const tripDetails = await fetchOneTrip(provider, tripId);
         setTrip(tripDetails);
         setLoading(false);
+
+        const currentTime = Date.now();
+        const dropoffTime = Date.parse(tripDetails.dropoffTime);
+        setShowCompleteButton(
+          currentTime >= dropoffTime 
+
+        );
       } catch (err) {
         console.error("Failed to fetch trip details: ", err);
         setError(err.message || "Failed to fetch trip details");
@@ -54,11 +65,13 @@ export default function TripDetailsPage() {
     fetchTripDetails();
   }, [provider, tripId]);
 
+
+
   const handleBookTrip = async () => {
     if (!trip || !tripId || !provider) {
-      setBookingStatus({ 
-        loading: false, 
-        error: "Trip details or provider not available" 
+      setBookingStatus({
+        loading: false,
+        error: "Trip details or provider not available",
       });
       return;
     }
@@ -81,6 +94,32 @@ export default function TripDetailsPage() {
       setBookingStatus({
         loading: false,
         error: error.message || "Failed to book trip",
+      });
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    if (!tripId || !provider) {
+      setCompleteStatus({
+        loading: false,
+        error: "Trip details or provider not available",
+      });
+      return;
+    }
+
+    setCompleteStatus({ loading: true, error: null });
+
+    try {
+      console.log("Completing trip with id ", tripId);
+      await completeTrip(tripId, provider);
+
+      setCompleteStatus({ loading: false, error: null });
+      alert("Trip completed successfully!");
+    } catch (error) {
+      console.error("Failed to complete trip: ", error);
+      setCompleteStatus({
+        loading: false,
+        error: error.message || "Failed to complete trip",
       });
     }
   };
@@ -140,10 +179,15 @@ export default function TripDetailsPage() {
               <Clock className="h-5 w-5 text-teal-500" />
               <span className="font-semibold">Pickup:</span>
               <span>
-                {trip.pickupTimestamp
-                  ? new Date(
-                      Number(trip.pickupTimestamp) * 1000
-                    ).toLocaleString()
+                {trip.pickupTime
+                  ? trip.pickupTime.toLocaleString("en-US", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })
                   : "N/A"}
               </span>
             </div>
@@ -151,10 +195,15 @@ export default function TripDetailsPage() {
               <Clock className="h-5 w-5 text-teal-500" />
               <span className="font-semibold">Dropoff:</span>
               <span>
-                {trip.dropoffTimestamp
-                  ? new Date(
-                      Number(trip.dropoffTimestamp) * 1000
-                    ).toLocaleString()
+                {trip.dropoffTime
+                  ? trip.dropoffTime.toLocaleString("en-US", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })
                   : "N/A"}
               </span>
             </div>
@@ -215,14 +264,36 @@ export default function TripDetailsPage() {
             {bookingStatus.error && (
               <p className="text-red-500 mb-2">{bookingStatus.error}</p>
             )}
-            <Button
-              className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
-              size="lg"
-              onClick={handleBookTrip}
-              disabled={bookingStatus.loading || !trip}
-            >
-              {bookingStatus.loading ? "Booking..." : "Book This Ride"}
-            </Button>
+            <div className="flex flex-col items-center">
+              <Button
+                className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
+                size="lg"
+                onClick={handleBookTrip}
+                disabled={showCompleteButton}
+              >
+                {bookingStatus.loading ? "Booking..." : "Book This Ride"}
+              </Button>
+              {showCompleteButton && (
+                <div className="mt-4">
+                  {completeStatus.error && (
+                    <p className="text-red-500 mb-2">{completeStatus.error}</p>
+                  )}
+                  <Button
+                    className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
+                    size="lg"
+                    onClick={handleCompleteTrip}
+                    disabled={completeStatus.loading || !trip.isPaid}
+                  >
+                    {completeStatus.loading ? "Completing..." : "Complete Trip"}
+                  </Button>
+                  {!trip.isPaid && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Trip must be paid for before it can be completed
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -10,7 +10,6 @@ export default function HomePage() {
   const [provider, setProvider] = useState(null);
 
   useEffect(() => {
-    // Initialize provider only on client side
     if (typeof window !== "undefined" && window.ethereum) {
       setProvider(new ethers.BrowserProvider(window.ethereum));
     }
@@ -18,7 +17,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const getAllTrips = async () => {
-      if (!provider) return; // Don't fetch if provider isn't initialized
+      if (!provider) return; 
 
       try {
         const trips = await fetchAllTrips(provider);
@@ -39,7 +38,16 @@ export default function HomePage() {
           <FindForm />
         </div>
         <div>
-          <TripList upcomingTrips={upcomingTrips} />
+          <div>
+            <TripList upcomingTrips={upcomingTrips} headerText="Past Trips" finished={true} />
+          </div>
+          <div>
+            <TripList
+              upcomingTrips={upcomingTrips}
+              headerText="Upcoming Trips"
+              finished={false}
+            />
+          </div>
         </div>
       </div>
     </div>
