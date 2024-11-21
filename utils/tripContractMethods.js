@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0xD76c37c09C7C01A128e08eC45857822b0C340492";
+const CONTRACT_ADDRESS = "0x492C1Fc7E9C657471855D348488E8E8f0aE9199F";
 const CONTRACT_ABI = tripContractAbi;
 
 export const fetchAllTrips = async (provider) => {
@@ -125,32 +125,52 @@ export const bookTrip = async (provider, tripId, price) => {
     // Call the bookTrip function with the required payment
     const tx = await tripContract.bookTrip(tripId, {
       value: priceInWei,
+      gasLimit: 300000,
     });
 
     // Wait for the transaction to be mined
     const receipt = await tx.wait();
 
     // Check if the transaction was successful
+    // Check if the transaction was successful by receipt status
     if (receipt.status === 1) {
-      // Get the TripBooked event from the transaction receipt
-      const tripBookedEvent = receipt.events?.find(
-        (event) => event.event === "TripBooked"
-      );
+      // Look for TripBooked event in logs instead of events
+      const tripBookedLog = receipt.logs.find((log) => {
+        try {
+          const parsedLog = tripContract.interface.parseLog({
+            topics: log.topics,
+            data: log.data,
+          });
+          return parsedLog.name === "TripBooked";
+        } catch {
+          return false;
+        }
+      });
 
-      if (tripBookedEvent) {
-        const [bookingTripId, passenger, amount] = tripBookedEvent.args;
+      if (tripBookedLog) {
+        const parsedLog = tripContract.interface.parseLog({
+          topics: tripBookedLog.topics,
+          data: tripBookedLog.data,
+        });
 
         return {
           success: true,
-          tripId: bookingTripId.toString(),
-          passenger,
-          amount: ethers.formatEther(amount),
+          tripId: parsedLog.args[0].toString(),
+          passenger: parsedLog.args[1],
+          amount: ethers.formatEther(parsedLog.args[2]),
           transactionHash: receipt.transactionHash,
         };
       }
+
+      // Even if we can't find the event, return success if transaction status is 1
+      return {
+        success: true,
+        tripId: tripId.toString(),
+        transactionHash: receipt.transactionHash,
+      };
     }
 
-    throw new Error("Transaction failed or event not found");
+    throw new Error("Transaction failed");
   } catch (error) {
     // Handle specific error cases
     if (error.message.includes("Already booked this trip")) {
@@ -161,6 +181,10 @@ export const bookTrip = async (provider, tripId, price) => {
       throw new Error("This trip's pickup time has already passed");
     } else if (error.message.includes("Incorrect payment amount")) {
       throw new Error("Incorrect payment amount provided");
+    } else if (error.message.includes("Driver cannot book their own trip")) {
+      throw new Error("You cannot book your own trip as the driver");
+    } else if (error.message.includes("Not the driver")) {
+      throw new Error("Only the driver can complete the trip");
     }
 
     // Log the full error for debugging
@@ -220,6 +244,56 @@ export const completeTrip = async (tripId, provider) => {
     if (error.message.includes("Trip not yet complete")) {
       throw new Error("Cannot complete trip before dropoff time");
     }
+    throw error;
+  }
+};
+
+export const fetchTripPassengers = async (tripId, provider) => {
+  try {
+    if (!provider) {
+      throw new Error("Provider is required");
+    }
+
+    if (!tripId) {
+      throw new Error("TripId is required");
+    }
+    const signer = await provider.getSigner();
+    const tripContract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      CONTRACT_ABI,
+      signer
+    );
+
+    const passengers = await tripContract.getTripPassengers(tripId);
+
+    const passengersWithRatings = await Promise.all(
+      passengers.map(async (passenger) => {
+        try {
+          const rating = await tripContract.getPassengerRating(
+            tripId,
+            passenger
+          );
+          return {
+            address: passenger,
+            rating: rating > 0 ? rating.toString() : null,
+          };
+        } catch (err) {
+          return {
+            address: passenger,
+            rating: null,
+          };
+        }
+      })
+    );
+
+    console.log("Fetched passengers for trip: ", {
+      tripId,
+      passengers: passengersWithRatings,
+    });
+
+    return passengersWithRatings;
+  } catch (error) {
+    console.error("Error fetching trip passengers:", error);
     throw error;
   }
 };

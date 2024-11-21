@@ -1,7 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowRight,
   Clock,
@@ -9,12 +10,18 @@ import {
   MessageCircle,
   Phone,
   Star,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
-import { fetchOneTrip, bookTrip, completeTrip } from "@/utils/tripContractMethods";
+import { useEffect } from "react";
+import {
+  fetchOneTrip,
+  bookTrip,
+  completeTrip,
+  fetchTripPassengers,
+} from "@/utils/tripContractMethods";
 
 export default function TripDetailsPage() {
   const { tripId } = useParams();
@@ -31,6 +38,9 @@ export default function TripDetailsPage() {
     error: null,
   });
   const [showCompleteButton, setShowCompleteButton] = useState(false);
+  const [showPassengers, setShowPassengers] = useState(false);
+  const [passengers, setPassengers] = useState([]);
+  const [loadingPassengers, setLoadingPassengers] = useState(false);
 
   // Initialize provider
   useEffect(() => {
@@ -51,10 +61,7 @@ export default function TripDetailsPage() {
 
         const currentTime = Date.now();
         const dropoffTime = Date.parse(tripDetails.dropoffTime);
-        setShowCompleteButton(
-          currentTime >= dropoffTime 
-
-        );
+        setShowCompleteButton(currentTime >= dropoffTime);
       } catch (err) {
         console.error("Failed to fetch trip details: ", err);
         setError(err.message || "Failed to fetch trip details");
@@ -65,7 +72,22 @@ export default function TripDetailsPage() {
     fetchTripDetails();
   }, [provider, tripId]);
 
-
+  // Fetch all passengers
+  useEffect(() => {
+    const getPassengers = async () => {
+      if (!showPassengers || !provider || !tripId) return;
+      setLoadingPassengers(true);
+      try {
+       const passengersData = await fetchTripPassengers(tripId, provider);
+       setPassengers(passengersData);
+      } catch(err){
+        console.error("Failed to fetch passengers: ", err);
+      } finally{
+        setLoadingPassengers(false)
+      }
+    };
+    getPassengers();
+  }, [showPassengers, provider, tripId]);
 
   const handleBookTrip = async () => {
     if (!trip || !tripId || !provider) {
@@ -79,10 +101,13 @@ export default function TripDetailsPage() {
     setBookingStatus({ loading: true, error: null });
 
     try {
+          const priceInWei = ethers.parseEther(trip.price.toString());
+
       console.log("Trip details before booking:", {
         tripId,
         price: trip.price,
-        provider: provider ? "Available" : "Not available",
+        priceInWei: priceInWei.toString(),
+        providerStatus: provider ? "Available" : "Not available",
       });
 
       const result = await bookTrip(provider, tripId, trip.price);
@@ -124,7 +149,10 @@ export default function TripDetailsPage() {
     }
   };
 
-  // could use next js loading and error files instead
+  const togglePassengersList = () => {
+    setShowPassengers(!showPassengers);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 text-center">
@@ -260,6 +288,63 @@ export default function TripDetailsPage() {
             </CardContent>
           </Card>
 
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-teal-500" />
+                <span className="font-semibold">Available Seats:</span>
+                <span>{trip.availableSeats || "N/A"}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={togglePassengersList}
+                className="text-teal-500 border-teal-500 hover:bg-teal-50"
+              >
+                {showPassengers ? "Hide Passengers" : "Show Passengers"}
+              </Button>
+            </div>
+            {showPassengers && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                <h4 className="font-semibold mb-2">Booked Passengers:</h4>
+                {loadingPassengers ? (
+                  <p className="text-sm text-gray-500">Loading passengers...</p>
+                ) : passengers.length > 0 ? (
+                  <ul className="space-y-2">
+                    {passengers.map((passenger, index) => (
+                      <li
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-4 w-4 text-teal-500" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {`${passenger.address.slice(
+                              0,
+                              6
+                            )}...${passenger.address.slice(-4)}`}
+                          </span>
+                        </div>
+                        {passenger.rating && (
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                            <span className="ml-1 text-sm text-gray-600">
+                              {passenger.rating}/5
+                            </span>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No passengers booked yet.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="text-center">
             {bookingStatus.error && (
               <p className="text-red-500 mb-2">{bookingStatus.error}</p>
@@ -288,7 +373,8 @@ export default function TripDetailsPage() {
                   </Button>
                   {!trip.isPaid && (
                     <p className="text-sm text-gray-500 mt-2">
-                      Trip must be paid for before it can be completed
+                      Trip must be paid for before it can be completed or is
+                      already completed
                     </p>
                   )}
                 </div>

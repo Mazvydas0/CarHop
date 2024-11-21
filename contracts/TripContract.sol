@@ -24,6 +24,27 @@ contract TripContract {
     mapping(uint256 => TripSchedule) public tripSchedules;
     mapping(uint256 => mapping(address => bool)) public isBooked;
     mapping(uint256 => uint256) public escrow;
+    mapping(uint256 => mapping(address => uint8)) public passengerRatings; // Ratings given to passengers
+    mapping(uint256 => mapping(address => bool))
+        public passengerCompletionConfirmation;
+
+    event TripCancelled(
+        uint256 tripId,
+        uint256 totalRefunded,
+        uint256 passengerCount
+    );
+    event PassengerRefunded(uint256 tripId, address passenger, uint256 amount);
+
+    event BookingCancelled(
+        uint256 tripId,
+        address passenger,
+        uint256 refundAmount
+    );
+    event PassengerRated(
+        uint256 tripId,
+        address indexed passenger,
+        uint8 rating
+    );
 
     event TripCreated(
         uint256 tripId,
@@ -43,6 +64,14 @@ contract TripContract {
         uint256 newPickupTime,
         uint256 newDropoffTime
     );
+    bool private locked;
+
+    modifier noReentrant() {
+        require(!locked, "Reentrant call");
+        locked = true;
+        _;
+        locked = false;
+    }
 
     modifier onlyDriver(uint256 _tripId) {
         require(msg.sender == trips[_tripId].driver, "Not the driver");
@@ -117,11 +146,93 @@ contract TripContract {
         );
     }
 
+    function cancelTrip(
+        uint256 _tripId
+    )
+        public
+        onlyDriver(_tripId)
+        tripExists(_tripId)
+        tripNotCompleted(_tripId)
+        noReentrant // Add reentrancy protection for multiple refunds
+    {
+        Trip storage trip = trips[_tripId];
+        uint256 totalRefunded = 0;
+        uint256 passengerCount = trip.passengers.length;
+
+        // Process refunds first
+        if (passengerCount > 0) {
+            uint256 refundAmount = trip.price;
+            for (uint256 i = 0; i < passengerCount; i++) {
+                address passenger = trip.passengers[i];
+
+                // Reset booking status
+                isBooked[_tripId][passenger] = false;
+
+                // Process refund
+                (bool success, ) = payable(passenger).call{value: refundAmount}(
+                    ""
+                );
+                require(
+                    success,
+                    string(
+                        abi.encodePacked(
+                            "Refund failed for passenger: ",
+                            toString(passenger)
+                        )
+                    )
+                );
+
+                totalRefunded += refundAmount;
+                emit PassengerRefunded(_tripId, passenger, refundAmount);
+            }
+
+            // Clear the passengers array
+            delete trip.passengers;
+        }
+
+        // Clear escrow
+        escrow[_tripId] = 0;
+
+        // Mark trip as completed to prevent further bookings
+        trip.completed = true;
+
+        emit TripCancelled(_tripId, totalRefunded, passengerCount);
+    }
+
+    // Helper function to convert address to string for error messages
+    function toString(address account) internal pure returns (string memory) {
+        return toString(abi.encodePacked(account));
+    }
+
+    function toString(bytes memory data) internal pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(2 + data.length * 2);
+        str[0] = "0";
+        str[1] = "x";
+        for (uint256 i = 0; i < data.length; i++) {
+            str[2 + i * 2] = alphabet[uint256(uint8(data[i] >> 4))];
+            str[2 + i * 2 + 1] = alphabet[uint256(uint8(data[i] & 0x0f))];
+        }
+        return string(str);
+    }
+
     function updateTripSchedule(
         uint256 _tripId,
         uint256 _newPickupTime,
         uint256 _newDropoffTime
     ) public onlyDriver(_tripId) tripExists(_tripId) tripNotCompleted(_tripId) {
+        TripSchedule storage currentSchedule = tripSchedules[_tripId];
+
+        // Check if the current pickup time has passed
+        require(
+            block.timestamp < currentSchedule.pickupTime,
+            "Trip has already started or passed"
+        );
+
+        // Check if the trip schedule is flexible
+        require(currentSchedule.isFlexible, "Trip schedule is not flexible");
+
+        // Validate new times
         require(
             _newPickupTime > block.timestamp,
             "New pickup time must be in the future"
@@ -131,9 +242,9 @@ contract TripContract {
             "New dropoff time must be after pickup time"
         );
 
-        TripSchedule storage schedule = tripSchedules[_tripId];
-        schedule.pickupTime = _newPickupTime;
-        schedule.dropoffTime = _newDropoffTime;
+        // Update the schedule
+        currentSchedule.pickupTime = _newPickupTime;
+        currentSchedule.dropoffTime = _newDropoffTime;
 
         emit TripScheduleUpdated(_tripId, _newPickupTime, _newDropoffTime);
     }
@@ -144,6 +255,7 @@ contract TripContract {
         Trip storage trip = trips[_tripId];
         TripSchedule storage schedule = tripSchedules[_tripId];
 
+        require(msg.sender != trip.driver, "Driver cannot book their own trip");
         require(!isBooked[_tripId][msg.sender], "Already booked this trip");
         require(trip.availableSeats > 0, "No seats available");
         require(msg.value == trip.price, "Incorrect payment amount");
@@ -160,9 +272,45 @@ contract TripContract {
         emit TripBooked(_tripId, msg.sender, msg.value);
     }
 
-    function completeTrip(
+    function cancelBooking(
         uint256 _tripId
-    ) public onlyDriver(_tripId) tripExists(_tripId) tripNotCompleted(_tripId) {
+    )
+        public
+        onlyPassenger(_tripId)
+        tripExists(_tripId)
+        tripNotCompleted(_tripId)
+    {
+        Trip storage trip = trips[_tripId];
+        TripSchedule storage schedule = tripSchedules[_tripId];
+
+        require(block.timestamp < schedule.pickupTime, "Too late to cancel");
+
+        // Find and remove passenger
+        for (uint256 i = 0; i < trip.passengers.length; i++) {
+            if (trip.passengers[i] == msg.sender) {
+                trip.passengers[i] = trip.passengers[
+                    trip.passengers.length - 1
+                ];
+                trip.passengers.pop();
+                break;
+            }
+        }
+
+        isBooked[_tripId][msg.sender] = false;
+        trip.availableSeats++;
+
+        uint256 refundAmount = trip.price;
+        escrow[_tripId] -= refundAmount;
+
+        (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
+        require(success, "Refund failed");
+
+        emit BookingCancelled(_tripId, msg.sender, refundAmount);
+    }
+
+    function confirmTripCompletion(
+        uint256 _tripId
+    ) public tripExists(_tripId) tripNotCompleted(_tripId) {
         Trip storage trip = trips[_tripId];
         TripSchedule storage schedule = tripSchedules[_tripId];
 
@@ -171,11 +319,73 @@ contract TripContract {
             "Trip not yet complete"
         );
 
+        // Allow either driver or passengers to confirm
+        require(
+            msg.sender == trip.driver || isBooked[_tripId][msg.sender],
+            "Not authorized to confirm trip completion"
+        );
+
+        // Mark the confirmation
+        passengerCompletionConfirmation[_tripId][msg.sender] = true;
+
+        // Check if we have enough confirmations to complete the trip
+        uint256 confirmationCount = 0;
+        uint256 passengerConfirmations = 0;
+        bool driverConfirmed = false;
+
+        // Check driver's confirmation
+        if (passengerCompletionConfirmation[_tripId][trip.driver]) {
+            driverConfirmed = true;
+            confirmationCount++;
+        }
+
+        // Count passenger confirmations
+        for (uint256 i = 0; i < trip.passengers.length; i++) {
+            if (passengerCompletionConfirmation[_tripId][trip.passengers[i]]) {
+                passengerConfirmations++;
+                confirmationCount++;
+            }
+        }
+
+        // Calculate required confirmations based on passenger count
+        bool hasEnoughConfirmations = false;
+        uint256 totalPassengers = trip.passengers.length;
+
+        if (driverConfirmed) {
+            // Driver must always confirm
+            if (totalPassengers == 1) {
+                // For 1 passenger: require both driver and passenger
+                hasEnoughConfirmations = (passengerConfirmations == 1);
+            } else if (totalPassengers == 2) {
+                // For 2 passengers: require driver and both passengers
+                hasEnoughConfirmations = (passengerConfirmations == 2);
+            } else if (totalPassengers == 3) {
+                // For 3 passengers: require driver and at least 2 passengers
+                hasEnoughConfirmations = (passengerConfirmations >= 2);
+            } else if (totalPassengers > 3) {
+                // For >3 passengers: require driver and all-but-one passengers
+                hasEnoughConfirmations = (passengerConfirmations >=
+                    totalPassengers - 1);
+            }
+        }
+
+        // If we have enough confirmations, complete the trip
+        if (hasEnoughConfirmations) {
+            finalizeTrip(_tripId);
+        }
+    }
+
+    // Internal function to finalize the trip and release funds
+    function finalizeTrip(uint256 _tripId) internal {
+        Trip storage trip = trips[_tripId];
+
+        require(!trip.completed, "Trip already completed");
+
         uint256 escrowAmount = escrow[_tripId];
         require(escrowAmount > 0, "No funds in escrow");
 
         trip.completed = true;
-        escrow[_tripId] = 0; // Clear escrow before transfer to prevent reentrancy
+        escrow[_tripId] = 0;
 
         (bool success, ) = payable(trip.driver).call{value: escrowAmount}("");
         require(success, "Transfer failed");
@@ -194,6 +404,21 @@ contract TripContract {
         trip.ratings[msg.sender] = _rating;
 
         emit RatedDriver(_tripId, msg.sender, _rating);
+    }
+
+    function ratePassenger(
+        uint256 _tripId,
+        address _passenger,
+        uint8 _rating
+    ) public onlyDriver(_tripId) tripExists(_tripId) {
+        Trip storage trip = trips[_tripId];
+        require(trip.completed, "Trip not completed");
+        require(isBooked[_tripId][_passenger], "Not a passenger of this trip");
+        require(_rating > 0 && _rating <= 5, "Invalid rating");
+
+        passengerRatings[_tripId][_passenger] = _rating;
+
+        emit PassengerRated(_tripId, _passenger, _rating);
     }
 
     function getTripSchedule(
@@ -243,6 +468,124 @@ contract TripContract {
         address passenger
     ) public view tripExists(_tripId) returns (uint8) {
         return trips[_tripId].ratings[passenger];
+    }
+
+    function getPassengerRating(
+        uint256 _tripId,
+        address _passenger
+    ) public view tripExists(_tripId) returns (uint8) {
+        return passengerRatings[_tripId][_passenger];
+    }
+
+    function getTripConfirmations(
+        uint256 _tripId
+    )
+        public
+        view
+        tripExists(_tripId)
+        returns (
+            bool driverConfirmed,
+            uint256 passengerConfirmations,
+            uint256 totalPassengers,
+            uint256 requiredPassengerConfirmations,
+            address[] memory confirmedParticipants
+        )
+    {
+        Trip storage trip = trips[_tripId];
+
+        // Count confirmations
+        uint256 confirmedCount = 0;
+        address[] memory confirmed = new address[](trip.passengers.length + 1);
+
+        // Check driver
+        driverConfirmed = passengerCompletionConfirmation[_tripId][trip.driver];
+        if (driverConfirmed) {
+            confirmed[confirmedCount++] = trip.driver;
+        }
+
+        // Count confirmed passengers
+        uint256 confirmedPassengers = 0;
+        for (uint256 i = 0; i < trip.passengers.length; i++) {
+            if (passengerCompletionConfirmation[_tripId][trip.passengers[i]]) {
+                confirmedPassengers++;
+                confirmed[confirmedCount++] = trip.passengers[i];
+            }
+        }
+
+        // Calculate required passenger confirmations based on total passengers
+        uint256 required;
+        if (trip.passengers.length == 1) {
+            required = 1; // Need the one passenger
+        } else if (trip.passengers.length == 2) {
+            required = 2; // Need both passengers
+        } else if (trip.passengers.length == 3) {
+            required = 2; // Need at least 2 passengers
+        } else {
+            required = trip.passengers.length - 1; // Need all but one passenger
+        }
+
+        // Create correctly sized array for confirmed participants
+        address[] memory trimmedConfirmed = new address[](confirmedCount);
+        for (uint256 i = 0; i < confirmedCount; i++) {
+            trimmedConfirmed[i] = confirmed[i];
+        }
+
+        return (
+            driverConfirmed,
+            confirmedPassengers,
+            trip.passengers.length,
+            required,
+            trimmedConfirmed
+        );
+    }
+
+    function calculateDriverAverageRating(
+        address _driver
+    ) public view returns (uint256) {
+        uint256 totalRatings = 0;
+        uint256 ratingCount = 0;
+
+        for (uint256 i = 1; i <= tripCount; i++) {
+            if (trips[i].driver == _driver && trips[i].completed) {
+                for (uint256 j = 0; j < trips[i].passengers.length; j++) {
+                    uint8 rating = trips[i].ratings[trips[i].passengers[j]];
+                    if (rating > 0) {
+                        totalRatings += rating;
+                        ratingCount++;
+                    }
+                }
+            }
+        }
+
+        return ratingCount > 0 ? (totalRatings * 100) / ratingCount : 0;
+    }
+
+    function calculatePassengerAverageRating(
+        address _passenger
+    ) public view returns (uint256) {
+        uint256 totalRatings = 0;
+        uint256 ratingCount = 0;
+
+        for (uint256 i = 1; i <= tripCount; i++) {
+            bool passengerWasOnTrip = false;
+            for (uint256 j = 0; j < trips[i].passengers.length; j++) {
+                if (trips[i].passengers[j] == _passenger) {
+                    passengerWasOnTrip = true;
+                    break;
+                }
+            }
+
+            if (passengerWasOnTrip && trips[i].completed) {
+                uint8 rating = passengerRatings[i][_passenger];
+
+                if (rating > 0) {
+                    totalRatings += rating;
+                    ratingCount++;
+                }
+            }
+        }
+
+        return ratingCount > 0 ? (totalRatings * 100) / ratingCount : 0;
     }
 
     receive() external payable {}

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/Label";
 import { MapPin, Calendar, Clock, DollarSign } from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0xD76c37c09C7C01A128e08eC45857822b0C340492";
+const CONTRACT_ADDRESS = "0x492C1Fc7E9C657471855D348488E8E8f0aE9199F";
 const CONTRACT_ABI = tripContractAbi;
 
 export default function AddTrip() {
