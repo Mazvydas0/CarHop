@@ -11,147 +11,53 @@ import {
   Phone,
   Star,
   Users,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { ethers } from "ethers";
-import { useEffect } from "react";
+import RescheduleDialog from "@/components/home/RescheduleDialog";
+
 import {
-  fetchOneTrip,
-  bookTrip,
-  completeTrip,
-  fetchTripPassengers,
-} from "@/utils/tripContractMethods";
+  useEthereumProvider,
+  useTripDetails,
+  useTripPassengers,
+  useTripActions,
+} from "@/hooks/useTripDetails";
 
 export default function TripDetailsPage() {
   const { tripId } = useParams();
-  const [trip, setTrip] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [provider, setProvider] = useState(null);
-  const [bookingStatus, setBookingStatus] = useState({
-    loading: false,
-    error: null,
-  });
-  const [completeStatus, setCompleteStatus] = useState({
-    loading: false,
-    error: null,
-  });
-  const [showCompleteButton, setShowCompleteButton] = useState(false);
+  const provider = useEthereumProvider();
+  const { trip, loading, error, showCompleteButton, setTrip } = useTripDetails(
+    provider,
+    tripId
+  );
   const [showPassengers, setShowPassengers] = useState(false);
-  const [passengers, setPassengers] = useState([]);
-  const [loadingPassengers, setLoadingPassengers] = useState(false);
+  const { passengers, loadingPassengers } = useTripPassengers(
+    provider,
+    tripId,
+    showPassengers
+  );
+  const [rescheduleData, setRescheduleData] = useState({
+    pickupTime: "",
+    dropoffTime: "",
+  });
 
-  // Initialize provider
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      setProvider(new ethers.BrowserProvider(window.ethereum));
-    }
-  }, []);
-
-  // Fetch trip details
-  useEffect(() => {
-    const fetchTripDetails = async () => {
-      if (!provider || !tripId) return;
-
-      try {
-        const tripDetails = await fetchOneTrip(provider, tripId);
-        setTrip(tripDetails);
-        setLoading(false);
-
-        const currentTime = Date.now();
-        const dropoffTime = Date.parse(tripDetails.dropoffTime);
-        setShowCompleteButton(currentTime >= dropoffTime);
-      } catch (err) {
-        console.error("Failed to fetch trip details: ", err);
-        setError(err.message || "Failed to fetch trip details");
-        setLoading(false);
-      }
-    };
-
-    fetchTripDetails();
-  }, [provider, tripId]);
-
-  // Fetch all passengers
-  useEffect(() => {
-    const getPassengers = async () => {
-      if (!showPassengers || !provider || !tripId) return;
-      setLoadingPassengers(true);
-      try {
-       const passengersData = await fetchTripPassengers(tripId, provider);
-       setPassengers(passengersData);
-      } catch(err){
-        console.error("Failed to fetch passengers: ", err);
-      } finally{
-        setLoadingPassengers(false)
-      }
-    };
-    getPassengers();
-  }, [showPassengers, provider, tripId]);
-
-  const handleBookTrip = async () => {
-    if (!trip || !tripId || !provider) {
-      setBookingStatus({
-        loading: false,
-        error: "Trip details or provider not available",
-      });
-      return;
-    }
-
-    setBookingStatus({ loading: true, error: null });
-
-    try {
-          const priceInWei = ethers.parseEther(trip.price.toString());
-
-      console.log("Trip details before booking:", {
-        tripId,
-        price: trip.price,
-        priceInWei: priceInWei.toString(),
-        providerStatus: provider ? "Available" : "Not available",
-      });
-
-      const result = await bookTrip(provider, tripId, trip.price);
-      console.log("Trip booked successfully:", result);
-      setBookingStatus({ loading: false, error: null });
-      alert("Trip booked successfully!");
-    } catch (error) {
-      console.error("Failed to book trip:", error);
-      setBookingStatus({
-        loading: false,
-        error: error.message || "Failed to book trip",
-      });
-    }
-  };
-
-  const handleCompleteTrip = async () => {
-    if (!tripId || !provider) {
-      setCompleteStatus({
-        loading: false,
-        error: "Trip details or provider not available",
-      });
-      return;
-    }
-
-    setCompleteStatus({ loading: true, error: null });
-
-    try {
-      console.log("Completing trip with id ", tripId);
-      await completeTrip(tripId, provider);
-
-      setCompleteStatus({ loading: false, error: null });
-      alert("Trip completed successfully!");
-    } catch (error) {
-      console.error("Failed to complete trip: ", error);
-      setCompleteStatus({
-        loading: false,
-        error: error.message || "Failed to complete trip",
-      });
-    }
-  };
+  const {
+    handleBookTrip,
+    handleCompleteTrip,
+    handleCancelTrip,
+    handleCancelBooking,
+    handleRescheduleTrip,
+    bookingStatus,
+    completeStatus,
+  } = useTripActions(provider, tripId, trip);
 
   const togglePassengersList = () => {
     setShowPassengers(!showPassengers);
   };
+
+  const stars = Array.from({ length: 5 }, (_, index) => index);
 
   if (loading) {
     return (
@@ -177,27 +83,47 @@ export default function TripDetailsPage() {
     );
   }
 
-  const stars = Array.from({ length: 5 }, (_, index) => index);
-
   return (
     <div className="container mx-auto p-4">
       <Card className="overflow-hidden">
         <CardHeader className="bg-teal-500 text-white">
-          <CardTitle className="text-2xl font-bold">Trip Details</CardTitle>
+          <CardTitle className="text-2xl font-bold flex justify-between items-center">
+            <span>Trip Details</span>
+            {trip.completed || trip.cancelled ? (
+              <div className="flex items-center space-x-2 bg-white text-teal-500 px-3 py-1 rounded-full text-sm">
+                {trip.completed ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Completed</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4" />
+                    <span>Cancelled</span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 bg-white text-teal-500 px-3 py-1 rounded-full text-sm">
+                <Clock className="h-4 w-4" />
+                <span>Active</span>
+              </div>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="mb-8 flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
             <div className="flex items-center space-x-4">
               <MapPin className="h-6 w-6 text-teal-500" />
               <span className="text-lg font-semibold">
-                {trip.pickupLocation || "N/A"}
+                {trip?.pickupLocation || "N/A"}
               </span>
             </div>
             <ArrowRight className="h-6 w-6 text-teal-500" />
             <div className="flex items-center space-x-4">
               <MapPin className="h-6 w-6 text-teal-500" />
               <span className="text-lg font-semibold">
-                {trip.dropoffLocation || "N/A"}
+                {trip?.dropoffLocation || "N/A"}
               </span>
             </div>
           </div>
@@ -207,8 +133,8 @@ export default function TripDetailsPage() {
               <Clock className="h-5 w-5 text-teal-500" />
               <span className="font-semibold">Pickup:</span>
               <span>
-                {trip.pickupTime
-                  ? trip.pickupTime.toLocaleString("en-US", {
+                {trip?.pickupTime
+                  ? trip?.pickupTime.toLocaleString("en-US", {
                       year: "numeric",
                       month: "2-digit",
                       day: "2-digit",
@@ -223,8 +149,8 @@ export default function TripDetailsPage() {
               <Clock className="h-5 w-5 text-teal-500" />
               <span className="font-semibold">Dropoff:</span>
               <span>
-                {trip.dropoffTime
-                  ? trip.dropoffTime.toLocaleString("en-US", {
+                {trip?.dropoffTime
+                  ? trip?.dropoffTime.toLocaleString("en-US", {
                       year: "numeric",
                       month: "2-digit",
                       day: "2-digit",
@@ -239,7 +165,7 @@ export default function TripDetailsPage() {
 
           <div className="mb-8 text-center">
             <span className="text-3xl font-bold text-teal-600">
-              {trip.price} ETH
+              {trip?.price} ETH
             </span>
           </div>
 
@@ -255,7 +181,7 @@ export default function TripDetailsPage() {
                 />
                 <div className="flex-grow">
                   <h3 className="text-xl font-semibold">
-                    {trip.driver || "Driver Name"}
+                    {trip?.driver || "Driver Name"}
                   </h3>
                   <div className="flex items-center">
                     {stars.map((index) => (
@@ -293,7 +219,7 @@ export default function TripDetailsPage() {
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-teal-500" />
                 <span className="font-semibold">Available Seats:</span>
-                <span>{trip.availableSeats || "N/A"}</span>
+                <span>{trip?.availableSeats || "N/A"}</span>
               </div>
               <Button
                 variant="outline"
@@ -350,36 +276,68 @@ export default function TripDetailsPage() {
               <p className="text-red-500 mb-2">{bookingStatus.error}</p>
             )}
             <div className="flex flex-col items-center">
-              <Button
-                className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
-                size="lg"
-                onClick={handleBookTrip}
-                disabled={showCompleteButton}
-              >
-                {bookingStatus.loading ? "Booking..." : "Book This Ride"}
-              </Button>
-              {showCompleteButton && (
-                <div className="mt-4">
-                  {completeStatus.error && (
-                    <p className="text-red-500 mb-2">{completeStatus.error}</p>
-                  )}
+              <div id="trip-booking">
+                <Button
+                  className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
+                  size="lg"
+                  onClick={handleBookTrip}
+                  disabled={
+                    showCompleteButton || trip.completed || trip.cancelled
+                  }
+                >
+                  {bookingStatus.loading ? "Booking..." : "Book This Ride"}
+                </Button>
+                {showCompleteButton && !trip.completed && !trip.cancelled && (
+                  <div className="mt-4">
+                    {completeStatus.error && (
+                      <p className="text-red-500 mb-2">
+                        {completeStatus.error}
+                      </p>
+                    )}
+                    <Button
+                      className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
+                      size="lg"
+                      onClick={handleCompleteTrip}
+                      disabled={completeStatus.loading || !trip.isPaid}
+                    >
+                      {completeStatus.loading
+                        ? "Completing..."
+                        : "Complete Trip"}
+                    </Button>
+                    {!trip.isPaid && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        Trip must be paid for before it can be completed
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!trip.completed && !trip.cancelled && (
+                <div id="trip-modifying" className="mt-4 space-x-4">
                   <Button
-                    className="w-full max-w-md bg-teal-500 hover:bg-teal-600"
-                    size="lg"
-                    onClick={handleCompleteTrip}
-                    disabled={completeStatus.loading || !trip.isPaid}
+                    variant="destructive"
+                    className="w-48 max-w-md"
+                    onClick={handleCancelTrip}
                   >
-                    {completeStatus.loading ? "Completing..." : "Complete Trip"}
+                    Cancel Trip
                   </Button>
-                  {!trip.isPaid && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Trip must be paid for before it can be completed or is
-                      already completed
-                    </p>
-                  )}
+
+                  <Button
+                    variant="destructive"
+                    className="w-48 max-w-md"
+                    onClick={handleCancelBooking}
+                  >
+                    Cancel Booking
+                  </Button>
                 </div>
               )}
             </div>
+
+            <RescheduleDialog
+              rescheduleData={rescheduleData}
+              setRescheduleData={setRescheduleData}
+              handleRescheduleTrip={handleRescheduleTrip}
+            />
           </div>
         </CardContent>
       </Card>

@@ -2,20 +2,20 @@
 
 import { useState } from "react";
 import { ethers } from "ethers";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { MapPin, Calendar, Clock, DollarSign } from "lucide-react";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MapPin, Calendar, Clock, DollarSign, Users } from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0x492C1Fc7E9C657471855D348488E8E8f0aE9199F";
+const CONTRACT_ADDRESS = "0x42c8dE06885098325cacBa34bbCC818230D7A526";
 const CONTRACT_ABI = tripContractAbi;
 
 export default function AddTrip() {
@@ -26,6 +26,7 @@ export default function AddTrip() {
     price: "",
     pickupTime: "",
     dropoffTime: "",
+    availableSeats: "4",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -125,7 +126,7 @@ export default function AddTrip() {
           pickupTimestamp,
           dropoffTimestamp,
           priceInWei,
-          4,
+          parseInt(tripData.availableSeats, 10),
           true
         );
         console.log("Transaction submitted:", tx.hash);
@@ -140,8 +141,7 @@ export default function AddTrip() {
         console.log("Current trip count:", tripCount.toString());
 
         if (tripCount > 0) {
-          // Fetch details of the newly created trip (tripCount - 1 because array is 0-based)
-          const newTripId = tripCount - 1n;
+          const newTripId = tripCount;
           await fetchTripDetails(newTripId, tripContract);
         }
 
@@ -153,6 +153,7 @@ export default function AddTrip() {
           price: "",
           pickupTime: "",
           dropoffTime: "",
+          availableSeats: "4",
         });
 
         alert("Trip created successfully!");
@@ -207,7 +208,6 @@ export default function AddTrip() {
               <p>Status: {tripDetails.completed ? "Completed" : "Active"}</p>
             </div>
           )}
-          {/* Form fields remain the same */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="origin" className="flex items-center">
@@ -267,12 +267,12 @@ export default function AddTrip() {
                 onChange={handleInputChange}
                 placeholder="Enter price in ETH"
                 min="0"
-                step="0.001"
+                step="0.0001"
                 required
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="pickupTime" className="flex items-center">
                 <Clock className="w-4 h-4 mr-2 text-teal-500" />
@@ -298,6 +298,22 @@ export default function AddTrip() {
                 type="time"
                 value={tripData.dropoffTime}
                 onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="availableSeats" className="flex items-center">
+                <Users className="w-4 h-4 mr-2 text-teal-500" />
+                Available Seats
+              </Label>
+              <Input
+                id="availableSeats"
+                name="availableSeats"
+                type="number"
+                value={tripData.availableSeats}
+                onChange={handleInputChange}
+                min="1"
+                max="10"
                 required
               />
             </div>

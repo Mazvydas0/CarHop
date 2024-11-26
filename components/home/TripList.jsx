@@ -6,11 +6,12 @@ import TripCard from "./TripCard";
 export default function TripList({ upcomingTrips, headerText, finished }) {
   const currentTime = Date.now();
 
+  // filters trips, based on whether they are finished(or canceled) or not yet done
   const filteredTrips = upcomingTrips.filter((trip) => {
     const dropoffTimeMillis = Date.parse(trip.dropoffTime);
     return finished
-      ? dropoffTimeMillis <= currentTime
-      : dropoffTimeMillis > currentTime;
+      ? dropoffTimeMillis <= currentTime || trip.completed
+      : dropoffTimeMillis > currentTime && !trip.completed;
   });
 
   console.log("Filtered trips:", filteredTrips);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.27;
 
 contract TripContract {
     struct TripSchedule {
@@ -263,6 +263,10 @@ contract TripContract {
             schedule.pickupTime > block.timestamp,
             "Trip pickup time has passed"
         );
+        require(
+        address(msg.sender).balance >= trip.price,
+        "Insufficient balance to book this trip"
+    );
 
         trip.passengers.push(msg.sender);
         isBooked[_tripId][msg.sender] = true;
