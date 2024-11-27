@@ -62,7 +62,7 @@ export const useTripPassengers = (provider, tripId, showPassengers) => {
 
   useEffect(() => {
     const getPassengers = async () => {
-      if (!showPassengers || !provider || !tripId) return;
+      if  (!provider || !tripId) return;
 
       setLoadingPassengers(true);
       try {
@@ -76,7 +76,7 @@ export const useTripPassengers = (provider, tripId, showPassengers) => {
     };
 
     getPassengers();
-  }, [showPassengers, provider, tripId]);
+  }, [provider, tripId]);
 
   return { passengers, loadingPassengers };
 };
@@ -161,7 +161,6 @@ export const useTripActions = (provider, tripId, trip) => {
 
   const handleRescheduleTrip = async (pickupTime, dropoffTime) => {
     try {
-      console.log("handle reschedule called ");
       await rescheduleTrip(provider, tripId, pickupTime, dropoffTime);
       alert("Trip rescheduled successfully!");
       return await fetchOneTrip(provider, tripId);

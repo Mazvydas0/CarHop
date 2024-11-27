@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect } from "react";
 import { useSDK } from "@metamask/sdk-react";
 import  Cookies  from "js-cookie";

@@ -27,6 +27,7 @@ contract TripContract {
     mapping(uint256 => mapping(address => uint8)) public passengerRatings; // Ratings given to passengers
     mapping(uint256 => mapping(address => bool))
         public passengerCompletionConfirmation;
+    mapping(address => bool) private hasCompletedTrip;
 
     event TripCancelled(
         uint256 tripId,
@@ -160,6 +161,13 @@ contract TripContract {
         Trip storage trip = trips[_tripId];
         uint256 totalRefunded = 0;
         uint256 passengerCount = trip.passengers.length;
+        TripSchedule storage currentSchedule = tripSchedules[_tripId];
+
+        require(
+            block.timestamp < currentSchedule.pickupTime,
+            "Trip has already started"
+        );
+
 
         // Process refunds first
         if (passengerCount > 0) {
@@ -308,8 +316,14 @@ contract TripContract {
             "Not authorized to confirm trip completion"
         );
 
+        require(
+            !hasCompletedTrip[msg.sender],
+            "You have already completed the trip"
+        );
+
         // Mark the confirmation
         passengerCompletionConfirmation[_tripId][msg.sender] = true;
+        hasCompletedTrip[msg.sender] = true;
 
         // Check if we have enough confirmations to complete the trip
         uint256 confirmationCount = 0;

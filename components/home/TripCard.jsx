@@ -1,4 +1,3 @@
-"use client";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ArrowRight, Calendar, MapPin, Star } from "lucide-react";
 import Image from "next/image";

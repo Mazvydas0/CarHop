@@ -391,7 +391,7 @@ export const cancelTrip = async (provider, tripId) => {
     if (error.message.includes("Trip does not exist")) {
       throw new Error("Trip does not exist");
     }
-    if (error.message.includes("Only driver can cancel")) {
+    if (error.message.includes("Not the driver")) {
       throw new Error("Only the trip driver can cancel this trip");
     }
     if (error.message.includes("Trip already completed")) {

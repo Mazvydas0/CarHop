@@ -50,30 +50,6 @@ export default function AddTrip() {
     }
   };
 
-  const fetchTripDetails = async (tripId, contract) => {
-    try {
-      console.log("Fetching details for trip ID:", tripId);
-      const details = await contract.getTripDetails(tripId);
-      console.log("Raw trip details:", details);
-
-      // Format the details into a more readable object
-      const formattedDetails = {
-        pickupLocation: details.pickupLocation,
-        dropoffLocation: details.dropoffLocation,
-        price: ethers.formatEther(details.price),
-        availableSeats: details.availableSeats.toString(),
-        completed: details.completed,
-        driver: details.driver
-      };
-
-      console.log("Formatted trip details:", formattedDetails);
-      return formattedDetails;
-    } catch (error) {
-      console.error("Error fetching trip details:", error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");

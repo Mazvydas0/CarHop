@@ -15,11 +15,13 @@ export default function RescheduleDialog({
   setRescheduleData,
   handleRescheduleTrip,
 }) {
-  console.log('reschedule data ', rescheduleData)
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full max-w-md">
+        <Button
+          variant="outline"
+          className="w-48 max-w-md border-teal-500 text-teal-500 hover:border-teal-600 hover:text-teal-600"
+        >
           <Calendar className="mr-2 h-4 w-4" />
           Reschedule Trip
         </Button>

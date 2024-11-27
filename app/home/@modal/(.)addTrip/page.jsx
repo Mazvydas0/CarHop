@@ -1,10 +1,7 @@
-
-"use client";
-
 import AddTrip from "@/components/home/AddTrip";
 import Modal from "./modal";
 
-export default function InterceptedImagePage() {
+export default function InterceptedAddTripPage() {
   return (
     <Modal>
       <AddTrip />
