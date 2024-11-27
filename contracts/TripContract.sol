@@ -64,6 +64,8 @@ contract TripContract {
         uint256 newPickupTime,
         uint256 newDropoffTime
     );
+
+    event RefundFailed(uint256 tripId, address passenger);
     bool private locked;
 
     modifier noReentrant() {
@@ -172,15 +174,9 @@ contract TripContract {
                 (bool success, ) = payable(passenger).call{value: refundAmount}(
                     ""
                 );
-                require(
-                    success,
-                    string(
-                        abi.encodePacked(
-                            "Refund failed for passenger: ",
-                            toString(passenger)
-                        )
-                    )
-                );
+                if (!success) {
+                    emit RefundFailed(_tripId, passenger);
+                }
 
                 totalRefunded += refundAmount;
                 emit PassengerRefunded(_tripId, passenger, refundAmount);
@@ -197,23 +193,6 @@ contract TripContract {
         trip.completed = true;
 
         emit TripCancelled(_tripId, totalRefunded, passengerCount);
-    }
-
-    // Helper function to convert address to string for error messages
-    function toString(address account) internal pure returns (string memory) {
-        return toString(abi.encodePacked(account));
-    }
-
-    function toString(bytes memory data) internal pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(2 + data.length * 2);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < data.length; i++) {
-            str[2 + i * 2] = alphabet[uint256(uint8(data[i] >> 4))];
-            str[2 + i * 2 + 1] = alphabet[uint256(uint8(data[i] & 0x0f))];
-        }
-        return string(str);
     }
 
     function updateTripSchedule(
@@ -264,9 +243,9 @@ contract TripContract {
             "Trip pickup time has passed"
         );
         require(
-        address(msg.sender).balance >= trip.price,
-        "Insufficient balance to book this trip"
-    );
+            address(msg.sender).balance >= trip.price,
+            "Insufficient balance to book this trip"
+        );
 
         trip.passengers.push(msg.sender);
         isBooked[_tripId][msg.sender] = true;
@@ -410,19 +389,34 @@ contract TripContract {
         emit RatedDriver(_tripId, msg.sender, _rating);
     }
 
-    function ratePassenger(
+    function ratePassengers(
         uint256 _tripId,
-        address _passenger,
-        uint8 _rating
+        address[] calldata _passengers,
+        uint8[] calldata _ratings
     ) public onlyDriver(_tripId) tripExists(_tripId) {
+        require(_passengers.length > 0, "No passengers provided");
+        require(
+            _passengers.length == _ratings.length,
+            "Passengers and ratings length mismatch"
+        );
+
         Trip storage trip = trips[_tripId];
         require(trip.completed, "Trip not completed");
-        require(isBooked[_tripId][_passenger], "Not a passenger of this trip");
-        require(_rating > 0 && _rating <= 5, "Invalid rating");
 
-        passengerRatings[_tripId][_passenger] = _rating;
+        for (uint256 i = 0; i < _passengers.length; i++) {
+            address passenger = _passengers[i];
+            uint8 rating = _ratings[i];
 
-        emit PassengerRated(_tripId, _passenger, _rating);
+            require(
+                isBooked[_tripId][passenger],
+                "Not a passenger of this trip"
+            );
+            require(rating > 0 && rating <= 5, "Invalid rating");
+
+            passengerRatings[_tripId][passenger] = rating;
+
+            emit PassengerRated(_tripId, passenger, rating);
+        }
     }
 
     function getTripSchedule(
@@ -444,6 +438,7 @@ contract TripContract {
         view
         tripExists(_tripId)
         returns (
+            address driver,
             string memory pickupLocation,
             string memory dropoffLocation,
             uint256 price,
@@ -453,6 +448,7 @@ contract TripContract {
     {
         Trip storage trip = trips[_tripId];
         return (
+            trip.driver,
             trip.pickupLocation,
             trip.dropoffLocation,
             trip.price,
@@ -461,135 +457,84 @@ contract TripContract {
         );
     }
 
-    function getTripPassengers(
-        uint256 _tripId
-    ) public view tripExists(_tripId) returns (address[] memory) {
-        return trips[_tripId].passengers;
-    }
-
-    function getDriverRating(
-        uint256 _tripId,
-        address passenger
-    ) public view tripExists(_tripId) returns (uint8) {
-        return trips[_tripId].ratings[passenger];
-    }
-
-    function getPassengerRating(
-        uint256 _tripId,
-        address _passenger
-    ) public view tripExists(_tripId) returns (uint8) {
-        return passengerRatings[_tripId][_passenger];
-    }
-
-    function getTripConfirmations(
-        uint256 _tripId
-    )
-        public
-        view
-        tripExists(_tripId)
-        returns (
-            bool driverConfirmed,
-            uint256 passengerConfirmations,
-            uint256 totalPassengers,
-            uint256 requiredPassengerConfirmations,
-            address[] memory confirmedParticipants
-        )
-    {
-        Trip storage trip = trips[_tripId];
-
-        // Count confirmations
-        uint256 confirmedCount = 0;
-        address[] memory confirmed = new address[](trip.passengers.length + 1);
-
-        // Check driver
-        driverConfirmed = passengerCompletionConfirmation[_tripId][trip.driver];
-        if (driverConfirmed) {
-            confirmed[confirmedCount++] = trip.driver;
-        }
-
-        // Count confirmed passengers
-        uint256 confirmedPassengers = 0;
-        for (uint256 i = 0; i < trip.passengers.length; i++) {
-            if (passengerCompletionConfirmation[_tripId][trip.passengers[i]]) {
-                confirmedPassengers++;
-                confirmed[confirmedCount++] = trip.passengers[i];
-            }
-        }
-
-        // Calculate required passenger confirmations based on total passengers
-        uint256 required;
-        if (trip.passengers.length == 1) {
-            required = 1; // Need the one passenger
-        } else if (trip.passengers.length == 2) {
-            required = 2; // Need both passengers
-        } else if (trip.passengers.length == 3) {
-            required = 2; // Need at least 2 passengers
-        } else {
-            required = trip.passengers.length - 1; // Need all but one passenger
-        }
-
-        // Create correctly sized array for confirmed participants
-        address[] memory trimmedConfirmed = new address[](confirmedCount);
-        for (uint256 i = 0; i < confirmedCount; i++) {
-            trimmedConfirmed[i] = confirmed[i];
-        }
-
-        return (
-            driverConfirmed,
-            confirmedPassengers,
-            trip.passengers.length,
-            required,
-            trimmedConfirmed
-        );
-    }
-
     function calculateDriverAverageRating(
         address _driver
-    ) public view returns (uint256) {
+    ) public view returns (uint256, uint256) {
         uint256 totalRatings = 0;
         uint256 ratingCount = 0;
 
         for (uint256 i = 1; i <= tripCount; i++) {
-            if (trips[i].driver == _driver && trips[i].completed) {
+            // Check ratings if trip is completed
+            if (trips[i].completed) {
+                // Check if this trip's driver rated this address as a passenger
+                uint8 passengerRating = passengerRatings[i][_driver];
+
+                if (passengerRating > 0) {
+                    totalRatings += passengerRating;
+                    ratingCount++;
+                }
+
+                // Check if some passenger rated this driver when they were a driver
                 for (uint256 j = 0; j < trips[i].passengers.length; j++) {
-                    uint8 rating = trips[i].ratings[trips[i].passengers[j]];
-                    if (rating > 0) {
-                        totalRatings += rating;
+                    uint8 driverRating = trips[i].ratings[
+                        trips[i].passengers[j]
+                    ];
+                    if (driverRating > 0 && trips[i].driver == _driver) {
+                        totalRatings += driverRating;
                         ratingCount++;
                     }
                 }
             }
         }
 
-        return ratingCount > 0 ? (totalRatings * 100) / ratingCount : 0;
+        uint256 averageRating = ratingCount > 0
+            ? (totalRatings * 100) / ratingCount
+            : 0;
+        return (averageRating, ratingCount);
     }
 
     function calculatePassengerAverageRating(
         address _passenger
-    ) public view returns (uint256) {
+    ) public view returns (uint256, uint256) {
         uint256 totalRatings = 0;
         uint256 ratingCount = 0;
 
         for (uint256 i = 1; i <= tripCount; i++) {
-            bool passengerWasOnTrip = false;
-            for (uint256 j = 0; j < trips[i].passengers.length; j++) {
-                if (trips[i].passengers[j] == _passenger) {
-                    passengerWasOnTrip = true;
-                    break;
+            if (trips[i].completed) {
+                bool passengerWasOnTrip = false;
+                for (uint256 j = 0; j < trips[i].passengers.length; j++) {
+                    if (trips[i].passengers[j] == _passenger) {
+                        passengerWasOnTrip = true;
+                        break;
+                    }
                 }
-            }
 
-            if (passengerWasOnTrip && trips[i].completed) {
-                uint8 rating = passengerRatings[i][_passenger];
+                if (passengerWasOnTrip) {
+                    uint8 rating = passengerRatings[i][_passenger];
+                    if (rating > 0) {
+                        totalRatings += rating;
+                        ratingCount++;
+                    }
+                }
 
-                if (rating > 0) {
-                    totalRatings += rating;
-                    ratingCount++;
+                if (trips[i].driver == _passenger) {
+                    for (uint256 j = 0; j < trips[i].passengers.length; j++) {
+                        uint8 driverRating = trips[i].ratings[
+                            trips[i].passengers[j]
+                        ];
+                        if (driverRating > 0) {
+                            totalRatings += driverRating;
+                            ratingCount++;
+                        }
+                    }
                 }
             }
         }
 
-        return ratingCount > 0 ? (totalRatings * 100) / ratingCount : 0;
+        uint256 averageRating = ratingCount > 0
+            ? (totalRatings * 100) / ratingCount
+            : 0;
+        return (averageRating, ratingCount);
     }
 
     receive() external payable {}

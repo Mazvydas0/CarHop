@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MapPin, Calendar, Clock, DollarSign, Users } from "lucide-react";
+import { MapPin, Calendar, Clock, DollarSign, Users, Drill } from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0x42c8dE06885098325cacBa34bbCC818230D7A526";
+const CONTRACT_ADDRESS = "0xE02EE6a7742c4cfd3b21d0865459AA81060E078b";
 const CONTRACT_ABI = tripContractAbi;
 
 export default function AddTrip() {
@@ -31,7 +31,6 @@ export default function AddTrip() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState("");
-  const [tripDetails, setTripDetails] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,10 +63,10 @@ export default function AddTrip() {
         price: ethers.formatEther(details.price),
         availableSeats: details.availableSeats.toString(),
         completed: details.completed,
+        driver: details.driver
       };
 
       console.log("Formatted trip details:", formattedDetails);
-      setTripDetails(formattedDetails);
       return formattedDetails;
     } catch (error) {
       console.error("Error fetching trip details:", error);
@@ -80,7 +79,6 @@ export default function AddTrip() {
     setError("");
     setIsLoading(true);
     setTxHash("");
-    setTripDetails(null);
 
     if (typeof window.ethereum !== "undefined") {
       try {
@@ -136,14 +134,6 @@ export default function AddTrip() {
         const receipt = await tx.wait();
         console.log("Transaction confirmed:", receipt);
 
-        // Get the current trip count
-        const tripCount = await tripContract.tripCount();
-        console.log("Current trip count:", tripCount.toString());
-
-        if (tripCount > 0) {
-          const newTripId = tripCount;
-          await fetchTripDetails(newTripId, tripContract);
-        }
 
         // Clear form after successful submission
         setTripData({
@@ -198,16 +188,6 @@ export default function AddTrip() {
               Transaction submitted: {txHash.slice(0, 15)}...
             </div>
           )}
-          {tripDetails && (
-            <div className="p-3 text-sm text-blue-500 bg-blue-100 rounded-md">
-              <h3 className="font-bold mb-2">Trip Details:</h3>
-              <p>Pickup Location: {tripDetails.pickupLocation}</p>
-              <p>Dropoff Location: {tripDetails.dropoffLocation}</p>
-              <p>Price: {tripDetails.price} ETH</p>
-              <p>Available Seats: {tripDetails.availableSeats}</p>
-              <p>Status: {tripDetails.completed ? "Completed" : "Active"}</p>
-            </div>
-          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="origin" className="flex items-center">
@@ -257,7 +237,7 @@ export default function AddTrip() {
             <div className="space-y-2">
               <Label htmlFor="price" className="flex items-center">
                 <DollarSign className="w-4 h-4 mr-2 text-teal-500" />
-                Price (ETH)
+                Price (POL)
               </Label>
               <Input
                 id="price"
@@ -265,7 +245,7 @@ export default function AddTrip() {
                 type="number"
                 value={tripData.price}
                 onChange={handleInputChange}
-                placeholder="Enter price in ETH"
+                placeholder="Enter price in POL"
                 min="0"
                 step="0.0001"
                 required

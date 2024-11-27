@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   ArrowRight,
   Clock,
@@ -25,6 +26,8 @@ import {
   useTripActions,
 } from "@/hooks/useTripDetails";
 
+import { useTripRatings } from "@/hooks/useTripRatings";
+
 export default function TripDetailsPage() {
   const { tripId } = useParams();
   const provider = useEthereumProvider();
@@ -38,6 +41,7 @@ export default function TripDetailsPage() {
     tripId,
     showPassengers
   );
+
   const [rescheduleData, setRescheduleData] = useState({
     pickupTime: "",
     dropoffTime: "",
@@ -53,8 +57,25 @@ export default function TripDetailsPage() {
     completeStatus,
   } = useTripActions(provider, tripId, trip);
 
+  const {
+    ratings,
+    ratingStatus,
+    handleRatingChange,
+    ratePassengers,
+  } = useTripRatings(provider, tripId, trip);
+
   const togglePassengersList = () => {
     setShowPassengers(!showPassengers);
+  };
+
+  const handleBatchRatingSubmission = () => {
+    const ratingsToSubmit = Object.entries(ratings)
+      .filter(([, value]) => value) 
+      .map(([address, rating]) => ({ address, rating: parseInt(rating, 10) }));
+
+    if (ratingsToSubmit.length > 0) {
+      ratePassengers(ratingsToSubmit);
+    }
   };
 
   const stars = Array.from({ length: 5 }, (_, index) => index);
@@ -165,7 +186,7 @@ export default function TripDetailsPage() {
 
           <div className="mb-8 text-center">
             <span className="text-3xl font-bold text-teal-600">
-              {trip?.price} ETH
+              {trip?.price} POL
             </span>
           </div>
 
@@ -184,17 +205,15 @@ export default function TripDetailsPage() {
                     {trip?.driver || "Driver Name"}
                   </h3>
                   <div className="flex items-center">
-                    {stars.map((index) => (
-                      <Star
-                        key={index}
-                        className={`h-5 w-5 ${
-                          index < 5
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "fill-gray-200 text-gray-200"
-                        }`}
-                      />
-                    ))}
-                    <span className="ml-2">5.0</span>
+                    <Star
+                      className={"h-5 w-5 fill-yellow-400 text-yellow-400"}
+                    />
+
+                    <span className="ml-2">
+                      {(trip?.driverAverageRating / 100)
+                        .toFixed(2)
+                        .replace(".", ",")}
+                    </span>
                   </div>
                   <p className="mt-2 text-gray-600">
                     Vehicle details placeholder
@@ -227,45 +246,107 @@ export default function TripDetailsPage() {
                 onClick={togglePassengersList}
                 className="text-teal-500 border-teal-500 hover:bg-teal-50"
               >
-                {showPassengers ? "Hide Passengers" : "Show Passengers"}
+                {showPassengers ? "Hide Participants" : "Show Participants"}
               </Button>
             </div>
             {showPassengers && (
               <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <h4 className="font-semibold mb-2">Booked Passengers:</h4>
+                <h4 className="font-semibold mb-2">Trip Participants:</h4>
                 {loadingPassengers ? (
-                  <p className="text-sm text-gray-500">Loading passengers...</p>
-                ) : passengers.length > 0 ? (
-                  <ul className="space-y-2">
-                    {passengers.map((passenger, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-4 w-4 text-teal-500" />
-                          <span className="text-sm font-medium text-gray-700">
-                            {`${passenger.address.slice(
-                              0,
-                              6
-                            )}...${passenger.address.slice(-4)}`}
-                          </span>
-                        </div>
-                        {passenger.rating && (
-                          <div className="flex items-center">
-                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                            <span className="ml-1 text-sm text-gray-600">
-                              {passenger.rating}/5
+                  <p className="text-sm text-gray-500">
+                    Loading participants...
+                  </p>
+                ) : (
+                  <div>
+                    <ul className="space-y-4">
+                      <li className="p-2 bg-white rounded-lg shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Users className="h-4 w-4 text-teal-500" />
+                            <span className="text-sm font-medium text-gray-700">
+                              Driver:{" "}
+                              {`${trip.driver.slice(
+                                0,
+                                6
+                              )}...${trip.driver.slice(-4)}`}
                             </span>
                           </div>
-                        )}
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              max="5"
+                              value={ratings[trip.driver] || ""}
+                              onChange={(e) =>
+                                handleRatingChange(trip.driver, e.target.value)
+                              }
+                              className="w-16 text-center"
+                            />
+                          </div>
+                        </div>
                       </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    No passengers booked yet.
-                  </p>
+                      {passengers.length > 0 ? (
+                        passengers.map((passenger, index) => (
+                          <li
+                            key={index}
+                            className="p-2 bg-white rounded-lg shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Users className="h-4 w-4 text-teal-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  {`${passenger.address.slice(
+                                    0,
+                                    6
+                                  )}...${passenger.address.slice(-4)}`}
+                                </span>
+                                {passenger.averageRating && (
+                                  <div className="flex items-center space-x-1">
+                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {(passenger.averageRating / 100)
+                                        .toFixed(2)
+                                        .replace(".", ",")}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="5"
+                                  value={ratings[passenger.address] || ""}
+                                  onChange={(e) =>
+                                    handleRatingChange(
+                                      passenger.address,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-16 text-center"
+                                />
+                              </div>
+                            </div>
+                          </li>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          No passengers booked yet.
+                        </p>
+                      )}
+                    </ul>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        size="md"
+                        onClick={handleBatchRatingSubmission}
+                        disabled={ratingStatus.loading}
+                      >
+                        {ratingStatus.loading
+                          ? "Submitting..."
+                          : "Submit All Ratings"}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

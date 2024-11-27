@@ -66,7 +66,7 @@ export const useTripPassengers = (provider, tripId, showPassengers) => {
 
       setLoadingPassengers(true);
       try {
-        const passengersData = await fetchTripPassengers(tripId, provider);
+        const passengersData = await fetchTripPassengers(provider, tripId);
         setPassengers(passengersData);
       } catch (err) {
         console.error("Failed to fetch passengers: ", err);
@@ -161,6 +161,7 @@ export const useTripActions = (provider, tripId, trip) => {
 
   const handleRescheduleTrip = async (pickupTime, dropoffTime) => {
     try {
+      console.log("handle reschedule called ");
       await rescheduleTrip(provider, tripId, pickupTime, dropoffTime);
       alert("Trip rescheduled successfully!");
       return await fetchOneTrip(provider, tripId);

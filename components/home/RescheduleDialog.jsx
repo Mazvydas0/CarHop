@@ -15,6 +15,7 @@ export default function RescheduleDialog({
   setRescheduleData,
   handleRescheduleTrip,
 }) {
+  console.log('reschedule data ', rescheduleData)
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -63,7 +64,16 @@ export default function RescheduleDialog({
             />
           </div>
         </div>
-        <Button onClick={handleRescheduleTrip}>Submit</Button>
+        <Button
+          onClick={() =>
+            handleRescheduleTrip(
+              rescheduleData.pickupTime,
+              rescheduleData.dropoffTime
+            )
+          }
+        >
+          Submit
+        </Button>
       </DialogContent>
     </Dialog>
   );

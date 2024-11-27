@@ -14,19 +14,18 @@ export default function TripCard({ trip }) {
           <div className="flex items-center space-x-4">
             <Image
               src="/images/ProfilePic.jpg"
-              // alt={trip.driver}
-              alt="mock driver"
+              alt={trip.driver}
               width={50}
               height={50}
               className="rounded-full"
             />
             <div>
-              {/* <h3 className="font-semibold">{trip.driver}</h3> */}
-              <h3 className="font-semibold">mock driver</h3>
+              <h3 className="font-semibold">{trip.driver}</h3>
               <div className="flex items-center">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                {/* <span className="ml-1 text-sm">{trip.rating}</span> */}
-                <span className="ml-1 text-sm">rating</span>
+                <span className="ml-1 text-sm">{(trip?.driverAverageRating / 100)
+                        .toFixed(2)
+                        .replace(".", ",")}</span>
               </div>
             </div>
           </div>
@@ -43,7 +42,7 @@ export default function TripCard({ trip }) {
               })}
             </div>
             <div className="text-lg font-bold text-teal-600">
-              ETH {trip.price}
+              POL {trip.price}
             </div>
             <div className="text-sm text-gray-500">
               <span className="mr-1">Available seats:</span>

@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0x42c8dE06885098325cacBa34bbCC818230D7A526";
+const CONTRACT_ADDRESS = "0xE02EE6a7742c4cfd3b21d0865459AA81060E078b";
 const CONTRACT_ABI = tripContractAbi;
 
 export const fetchAllTrips = async (provider) => {
@@ -26,6 +26,8 @@ export const fetchAllTrips = async (provider) => {
         const tripSchedule = await tripContract.getTripSchedule(i);
         const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
         const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
+        const driverAverageRating =
+          await tripContract.calculateDriverAverageRating(tripDetails.driver);
 
         const formattedTripDetails = {
           tripId: i.toString(),
@@ -36,6 +38,8 @@ export const fetchAllTrips = async (provider) => {
           price: ethers.formatEther(tripDetails.price),
           availableSeats: tripDetails.availableSeats.toString(),
           completed: tripDetails.completed,
+          driver: tripDetails.driver,
+          driverAverageRating: driverAverageRating.toString(),
         };
 
         console.log("Fetched trip details:", formattedTripDetails);
@@ -66,6 +70,9 @@ export const fetchOneTrip = async (provider, id) => {
     const escrowAmount = await tripContract.escrow(id);
     const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
     const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
+    const driverAverageRating = await tripContract.calculateDriverAverageRating(
+      tripDetails.driver
+    );
 
     const formattedTripDetails = {
       tripId: id,
@@ -78,6 +85,8 @@ export const fetchOneTrip = async (provider, id) => {
       completed: tripDetails.completed,
       isPaid: escrowAmount > 0, // check if there are funds in escrow
       escrowAmount: ethers.formatEther(escrowAmount),
+      driver: tripDetails.driver,
+      driverAverageRating: driverAverageRating.toString(),
     };
 
     console.log("Fetched one trip details:", formattedTripDetails);
@@ -121,7 +130,7 @@ export const bookTrip = async (provider, tripId, price) => {
       contractAddress: CONTRACT_ADDRESS,
     });
 
-    // Convert the price from ETH to Wei
+    // Convert the price from POL to Wei
     const priceInWei = ethers.parseEther(price.toString());
 
     // Call the bookTrip function with the required payment
@@ -240,15 +249,15 @@ export const completeTrip = async (tripId, provider) => {
   }
 };
 
-export const fetchTripPassengers = async (tripId, provider) => {
+export const fetchTripPassengers = async (provider, tripId) => {
   try {
     if (!provider) {
       throw new Error("Provider is required");
     }
-
-    if (!tripId) {
-      throw new Error("TripId is required");
+    if (tripId === undefined) {
+      throw new Error("Trip ID is required");
     }
+
     const signer = await provider.getSigner();
     const tripContract = new ethers.Contract(
       CONTRACT_ADDRESS,
@@ -257,33 +266,32 @@ export const fetchTripPassengers = async (tripId, provider) => {
     );
 
     const passengers = await tripContract.getTripPassengers(tripId);
+    console.log("Fetched passengers:", passengers);
 
-    const passengersWithRatings = await Promise.all(
+    const formattedPassengers = await Promise.all(
       passengers.map(async (passenger) => {
         try {
-          const rating = await tripContract.getPassengerRating(
-            tripId,
-            passenger
+          const passengerAverageRating =
+            await tripContract.calculatePassengerAverageRating(passenger);
+
+          return {
+            address: passenger,
+            averageRating: passengerAverageRating.toString(),
+          };
+        } catch (error) {
+          console.error(
+            `Error fetching rating for passenger ${passenger}:`,
+            error
           );
           return {
             address: passenger,
-            rating: rating > 0 ? rating.toString() : null,
-          };
-        } catch (err) {
-          return {
-            address: passenger,
-            rating: null,
+            averageRating: null,
           };
         }
       })
     );
 
-    console.log("Fetched passengers for trip: ", {
-      tripId,
-      passengers: passengersWithRatings,
-    });
-
-    return passengersWithRatings;
+    return formattedPassengers;
   } catch (error) {
     console.error("Error fetching trip passengers:", error);
     throw error;
@@ -297,6 +305,7 @@ export const rescheduleTrip = async (
   newDropoffTime
 ) => {
   try {
+    console.log("new ", newPickupTime, newDropoffTime);
     if (!provider) {
       throw new Error("Provider is required");
     }
