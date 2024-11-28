@@ -47,7 +47,7 @@ export default function TripDetailsPage() {
     completeStatus,
   } = useTripActions(provider, tripId, trip);
 
-  const { ratings, ratingStatus, handleRatingChange, ratePassengers } =
+  const { ratings, ratingStatus, handleRatingChange, rateParticipants } =
     useTripRatings(provider, tripId, trip);
 
   const togglePassengersList = () => {
@@ -60,7 +60,7 @@ export default function TripDetailsPage() {
       .map(([address, rating]) => ({ address, rating: parseInt(rating, 10) }));
 
     if (ratingsToSubmit.length > 0) {
-      ratePassengers(ratingsToSubmit);
+      rateParticipants(ratingsToSubmit);
     }
   };
 

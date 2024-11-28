@@ -271,12 +271,13 @@ export const fetchTripPassengers = async (provider, tripId) => {
     const formattedPassengers = await Promise.all(
       passengers.map(async (passenger) => {
         try {
-          const passengerAverageRating =
+          const [PassengerAverageRating, PassengerRatingCount] =
             await tripContract.calculatePassengerAverageRating(passenger);
 
           return {
             address: passenger,
-            averageRating: passengerAverageRating.toString(),
+            averageRating: PassengerAverageRating.toString(),
+            ratingCount: PassengerRatingCount.toString(),
           };
         } catch (error) {
           console.error(

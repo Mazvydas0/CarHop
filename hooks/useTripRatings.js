@@ -17,7 +17,7 @@ export const useTripRatings = (provider, tripId, trip) => {
     setRatings((prev) => ({ ...prev, [address]: value }));
   };
 
-  const ratePassengers = async (ratingsToSubmit) => {
+  const rateParticipants = async (ratingsToSubmit) => {
     if (!provider || !tripId) {
       setRatingStatus({
         loading: false,
@@ -29,7 +29,7 @@ export const useTripRatings = (provider, tripId, trip) => {
 
     try {
       setRatingStatus({ loading: true, error: null, success: false });
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       const tripContract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
@@ -90,6 +90,6 @@ export const useTripRatings = (provider, tripId, trip) => {
     ratings,
     ratingStatus,
     handleRatingChange,
-    ratePassengers,
+    rateParticipants,
   };
 };

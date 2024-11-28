@@ -3,7 +3,6 @@ import { Users, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-
 export default function PassengersList({
   driver,
   passengers,
@@ -14,7 +13,7 @@ export default function PassengersList({
   handleBatchRatingSubmission,
   ratingStatus,
   togglePassengersList,
-  showPassengers
+  showPassengers,
 }) {
   return (
     <div className="mb-8">
@@ -48,6 +47,7 @@ export default function PassengersList({
                       <span className="text-sm font-medium text-gray-700">
                         Driver: {`${driver.slice(0, 6)}...${driver.slice(-4)}`}
                       </span>
+                      <span></span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Input
@@ -82,9 +82,13 @@ export default function PassengersList({
                             <div className="flex items-center space-x-1">
                               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                               <span className="text-sm font-medium text-gray-700">
-                                {(passenger.averageRating / 100)
-                                  .toFixed(2)
-                                  .replace(".", ",")}
+                                {passenger.averageRating > 0
+                                  ? `${(passenger.averageRating / 100)
+                                      .toFixed(2)
+                                      .replace(".", ",")} (${
+                                      passenger.ratingCount
+                                    })`
+                                  : `0,00 (${passenger.ratingCount})`}
                               </span>
                             </div>
                           )}
@@ -115,7 +119,8 @@ export default function PassengersList({
               </ul>
               <div className="mt-4 flex justify-end">
                 <Button
-                  size="md"
+                className="max-w-md"
+                  size="lg"
                   onClick={handleBatchRatingSubmission}
                   disabled={ratingStatus.loading}
                 >
