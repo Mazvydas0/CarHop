@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = "0xE02EE6a7742c4cfd3b21d0865459AA81060E078b";
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const CONTRACT_ABI = tripContractAbi;
 
 export const fetchAllTrips = async (provider) => {
@@ -26,7 +26,7 @@ export const fetchAllTrips = async (provider) => {
         const tripSchedule = await tripContract.getTripSchedule(i);
         const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
         const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
-        const driverAverageRating =
+        const [DriverAverageRating, DriverRatingCount] =
           await tripContract.calculateDriverAverageRating(tripDetails.driver);
 
         const formattedTripDetails = {
@@ -39,10 +39,10 @@ export const fetchAllTrips = async (provider) => {
           availableSeats: tripDetails.availableSeats.toString(),
           completed: tripDetails.completed,
           driver: tripDetails.driver,
-          driverAverageRating: driverAverageRating.toString(),
+          driverAverageRating: DriverAverageRating.toString(),
+          driverRatingCount: DriverRatingCount.toString(),
         };
 
-        console.log("Fetched trip details:", formattedTripDetails);
         allTrips.push(formattedTripDetails);
       } catch (error) {
         console.error(`Error fetching trip details for ID ${i}:`, error);
@@ -70,9 +70,8 @@ export const fetchOneTrip = async (provider, id) => {
     const escrowAmount = await tripContract.escrow(id);
     const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
     const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
-    const driverAverageRating = await tripContract.calculateDriverAverageRating(
-      tripDetails.driver
-    );
+    const [DriverAverageRating, DriverRatingCount] =
+      await tripContract.calculateDriverAverageRating(tripDetails.driver);
 
     const formattedTripDetails = {
       tripId: id,
@@ -86,7 +85,8 @@ export const fetchOneTrip = async (provider, id) => {
       isPaid: escrowAmount > 0, // check if there are funds in escrow
       escrowAmount: ethers.formatEther(escrowAmount),
       driver: tripDetails.driver,
-      driverAverageRating: driverAverageRating.toString(),
+      driverAverageRating: DriverAverageRating.toString(),
+      driverRatingCount: DriverRatingCount.toString(),
     };
 
     console.log("Fetched one trip details:", formattedTripDetails);
@@ -417,8 +417,7 @@ export const cancelBooking = async (provider, tripId) => {
       signer
     );
 
-    const gasLimit = await tripContract.cancelBooking.estimateGas(tripId);
-    const tx = await tripContract.cancelBooking(tripId, { gasLimit });
+    const tx = await tripContract.cancelBooking(tripId);
 
     const receipt = await tx.wait();
 

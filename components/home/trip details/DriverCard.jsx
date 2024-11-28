@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Phone, MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function DriverCard({ driver, driverAverageRating }) {
+export default function DriverCard({ driver, driverAverageRating, driverRatingCount }) {
   return (
     <Card className="mb-8">
       <CardContent className="p-6">
@@ -20,7 +20,11 @@ export default function DriverCard({ driver, driverAverageRating }) {
             <div className="flex items-center">
               <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
               <span className="ml-2">
-                {(driverAverageRating / 100).toFixed(2).replace(".", ",")}
+                {driverAverageRating > 0
+                  ? `${(driverAverageRating / 100)
+                      .toFixed(2)
+                      .replace(".", ",")} (${driverRatingCount})`
+                  : `0,00 (${driverRatingCount})`}
               </span>
             </div>
             <p className="mt-2 text-gray-600">Vehicle details placeholder</p>

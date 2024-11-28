@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { Clock, CheckCircle, XCircle } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import {
@@ -132,6 +128,7 @@ export default function TripDetailsPage() {
           <DriverCard
             driver={trip.driver}
             driverAverageRating={trip.driverAverageRating}
+            driverRatingCount={trip.driverRatingCount}
           />
           <PassengersList
             driver={trip.driver}

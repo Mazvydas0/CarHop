@@ -1,10 +1,37 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { fetchAllTrips } from "@/utils/tripContractMethods";
 import Link from "next/link";
 import TripCard from "./TripCard";
 
-export default function TripList({ upcomingTrips, headerText, finished }) {
+export default function TripList({ headerText, finished }) {
   const currentTime = Date.now();
+  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [provider, setProvider] = useState(null);
 
-  // filters trips, based on whether they are finished(or canceled) or not yet done
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ethereum) {
+      setProvider(new ethers.BrowserProvider(window.ethereum));
+    }
+  }, []);
+
+  useEffect(() => {
+    const getAllTrips = async () => {
+      if (!provider) return;
+
+      try {
+        const trips = await fetchAllTrips(provider);
+        console.log("All trips fetched: ", trips);
+        setUpcomingTrips(trips);
+      } catch (err) {
+        console.error("Error fetching trips: ", err);
+      }
+    };
+
+    getAllTrips();
+  }, [provider]);
+
   const filteredTrips = upcomingTrips.filter((trip) => {
     const dropoffTimeMillis = Date.parse(trip.dropoffTime);
     return finished

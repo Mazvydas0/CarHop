@@ -16,7 +16,6 @@ export default function PassengersList({
   togglePassengersList,
   showPassengers
 }) {
-
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center">

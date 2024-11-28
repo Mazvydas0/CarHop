@@ -22,9 +22,13 @@ export default function TripCard({ trip }) {
               <h3 className="font-semibold">{trip.driver}</h3>
               <div className="flex items-center">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="ml-1 text-sm">{(trip?.driverAverageRating / 100)
+                <span className="ml-1 text-sm">
+                  {trip?.driverAverageRating > 0
+                    ? `${(trip?.driverAverageRating / 100)
                         .toFixed(2)
-                        .replace(".", ",")}</span>
+                        .replace(".", ",")} (${trip?.driverRatingCount})`
+                    : `0,00 (${trip?.driverRatingCount})`}
+                </span>
               </div>
             </div>
           </div>

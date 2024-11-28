@@ -165,7 +165,7 @@ contract TripContract {
 
         require(
             block.timestamp < currentSchedule.pickupTime,
-            "Trip has already started"
+            "Trip has already started or passed"
         );
 
 
@@ -469,6 +469,12 @@ contract TripContract {
             trip.availableSeats,
             trip.completed
         );
+    }
+
+    function getTripPassengers(
+        uint256 _tripId
+    ) public view tripExists(_tripId) returns (address[] memory) {
+        return trips[_tripId].passengers;
     }
 
     function calculateDriverAverageRating(
