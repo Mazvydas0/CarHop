@@ -67,7 +67,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center space-x-4">
-        <MetaButton/>
+          <MetaButton />
           <Link
             href="/home/inbox"
             className="text-white hover:text-teal-100 relative"

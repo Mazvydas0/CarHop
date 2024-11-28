@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import RescheduleDialog from "@/components/home/RescheduleDialog";
 
 export default function TripActionButtons({

@@ -1,9 +1,13 @@
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Star, Phone, MessageCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 
-export default function DriverCard({ driver, driverAverageRating, driverRatingCount }) {
+export default function DriverCard({
+  driver,
+  driverAverageRating,
+  driverRatingCount,
+}) {
   return (
     <Card className="mb-8">
       <CardContent className="p-6">

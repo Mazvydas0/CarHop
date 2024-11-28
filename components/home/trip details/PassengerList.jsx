@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Users, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default function PassengersList({
   driver,
@@ -119,7 +119,7 @@ export default function PassengersList({
               </ul>
               <div className="mt-4 flex justify-end">
                 <Button
-                className="max-w-md"
+                  className="max-w-md"
                   size="lg"
                   onClick={handleBatchRatingSubmission}
                   disabled={ratingStatus.loading}

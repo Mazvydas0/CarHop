@@ -23,7 +23,7 @@ export function CarHopHero() {
         className="opacity-50"
       />
       <div className="absolute right-4 top-4 z-10">
-        <MetaButton/>
+        <MetaButton />
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
         <h1 className="mb-8 flex items-center text-6xl font-bold text-white drop-shadow-lg font-yeseva">
@@ -44,7 +44,7 @@ export function CarHopHero() {
               Find a Ride
             </Button>
           </Link>
-          <Link href='/home'>
+          <Link href="/home">
             <Button
               size="lg"
               variant="outline"

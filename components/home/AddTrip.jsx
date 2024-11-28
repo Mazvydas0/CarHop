@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { ethers } from "ethers";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { MapPin, Calendar, Clock, DollarSign, Users, Drill } from "lucide-react";
+} from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import {
+  MapPin,
+  Calendar,
+  Clock,
+  DollarSign,
+  Users,
+  Drill,
+} from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
@@ -109,7 +116,6 @@ export default function AddTrip() {
         // Wait for the transaction to be mined
         const receipt = await tx.wait();
         console.log("Transaction confirmed:", receipt);
-
 
         // Clear form after successful submission
         setTripData({
