@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -14,61 +14,87 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send } from "lucide-react";
 
-// Mock data for chat messages
-const initialMessages = [
-  {
-    id: 1,
-    sender: "John Doe",
-    content: "Hey, are we still on for the trip tomorrow?",
-    timestamp: "10:30 AM",
-    isSelf: false,
-  },
-  {
-    id: 2,
-    sender: "You",
-    content: "Yes, definitely! What time should I pick you up?",
-    timestamp: "10:32 AM",
-    isSelf: true,
-  },
-  {
-    id: 3,
-    sender: "John Doe",
-    content: "Great! How about 9 AM?",
-    timestamp: "10:33 AM",
-    isSelf: false,
-  },
-  {
-    id: 4,
-    sender: "You",
-    content: "Sounds good. I'll be there at 9. See you tomorrow!",
-    timestamp: "10:35 AM",
-    isSelf: true,
-  },
-];
-
-export function ChatWindowComponent({ id }) {
-  const [messages, setMessages] = useState(initialMessages);
+export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-
   const inputRef = useRef(null);
+  console.log("XMTP Client:", xmtpClient);
+  console.log("Recipient Address:", recipientAddress);
+  useEffect(() => {
+    if (!xmtpClient || !recipientAddress) return;
 
-  const handleSendMessage = (e) => {
+    // Function to load existing messages
+    const loadMessages = async () => {
+      try {
+        const conversation = await xmtpClient.conversations.newConversation(
+          recipientAddress
+        );
+
+        // Fetch all messages
+        const fetchedMessages = await conversation.messages();
+        setMessages(
+          fetchedMessages.map((msg) => ({
+            id: msg.id,
+            sender: msg.senderAddress,
+            content: msg.content,
+            timestamp: new Date(msg.sent).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isSelf: msg.senderAddress === xmtpClient.address,
+          }))
+        );
+
+        // Subscribe to new messages
+        const stream = await conversation.streamMessages();
+        (async () => {
+          for await (const msg of stream) {
+            setMessages((prevMessages) => {
+              // Check if message already exists
+              if (prevMessages.some((m) => m.id === msg.id)) {
+                return prevMessages;
+              }
+              return [
+                ...prevMessages,
+                {
+                  id: msg.id,
+                  sender: msg.senderAddress,
+                  content: msg.content,
+                  timestamp: new Date(msg.sent).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  isSelf: msg.senderAddress === xmtpClient.address,
+                },
+              ];
+            });
+          }
+        })();
+      } catch (error) {
+        console.error("Failed to load or subscribe to messages:", error);
+      }
+    };
+
+
+
+    loadMessages();
+  }, [xmtpClient, recipientAddress]);
+
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (newMessage.trim()) {
-      const message = {
-        id: messages.length + 1,
-        sender: "You",
-        content: newMessage,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSelf: true,
-      };
-      setMessages([...messages, message]);
-      setNewMessage("");
+    if (!newMessage.trim() || !xmtpClient || !recipientAddress) return;
+
+    try {
+      const conversation = await xmtpClient.conversations.newConversation(
+        recipientAddress
+      );
+      await conversation.send(newMessage);
+      setNewMessage(""); 
+    } catch (error) {
+      console.error("Failed to send message:", error);
     }
   };
+
 
   const focusInput = () => {
     inputRef.current?.focus();

@@ -92,7 +92,7 @@ export const fetchOneTrip = async (provider, id) => {
     console.log("Fetched one trip details:", formattedTripDetails);
     return formattedTripDetails;
   } catch (error) {
-    console.error("Error fetching all trips:", error);
+    console.error("Error fetching one trips:", error);
     throw error;
   }
 };

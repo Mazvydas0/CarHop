@@ -28,6 +28,7 @@ export const ConnectWalletButton = () => {
     connected,
     connecting,
     showBubble,
+    xmtpClient,
   } = useMetaMaskWallet();
 
   return (
@@ -54,6 +55,7 @@ export const ConnectWalletButton = () => {
           {showBubble && <BubbleMessage message="Check MetaMask extension" />}
         </div>
       )}
+      {xmtpClient && <p className="text-green-500">XMTP Connected</p>}
     </div>
   );
 };
@@ -64,7 +66,7 @@ export const MetaButton = () => {
     checkInstallationImmediately: false,
     dappMetadata: {
       name: "CarHop",
-      url: "host", // using the host constant defined above
+      url: "host",
     },
   };
 
