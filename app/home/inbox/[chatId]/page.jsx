@@ -1,36 +1,55 @@
 "use client";
 import { useXMTP } from "@/context/XMTPProvider";
+import { useChatContext } from "@/context/ChatProvider";
 import { ChatWindowComponent } from "@/components/home/ChatWindow";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ChatWindow() {
   const { xmtpClient, isXmtpInitialized, initializeXmtp } = useXMTP();
+  const { getChatParticipants } = useChatContext();
+  const router = useRouter();
 
-  const passenger1 = "0x2ed96BA3DB0a6daaE78bdB7C869f522E55DdE910";
+  const { chatId } = useParams();
 
-  // Additional initialization if needed
+  const [participant1, setParticipant1] = useState(null);
+  const [participant2, setParticipant2] = useState(null);
+
   useEffect(() => {
     if (!xmtpClient && !isXmtpInitialized) {
       initializeXmtp();
     }
-  }, [xmtpClient, isXmtpInitialized, initializeXmtp]);
 
-  // Loading state
+    if (chatId) {
+      const participants = getChatParticipants(chatId);
+
+      if (participants) {
+        setParticipant1(participants.sender);
+        setParticipant2(participants.receiver);
+      } else {
+        alert("Invalid chat session");
+        router.push("/home/inbox");
+      }
+    }
+  }, [chatId, xmtpClient, isXmtpInitialized, initializeXmtp]);
+
   if (!isXmtpInitialized) {
     return <div>Initializing XMTP...</div>;
   }
 
-  // Error state if client is not created
   if (!xmtpClient) {
     return <div>Failed to initialize XMTP client</div>;
   }
 
+  if (!participant1 || !participant2) {
+    return <div>Loading chat participants...</div>;
+  }
+
   return (
-    <div className="mt-12">
-      <ChatWindowComponent
-        xmtpClient={xmtpClient}
-        recipientAddress={passenger1}
-      />
-    </div>
+    <ChatWindowComponent
+      participant1={participant1}
+      participant2={participant2}
+    />
   );
 }

@@ -13,24 +13,26 @@ import { Input } from "@/components/ui/Input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send } from "lucide-react";
+import { useXMTP } from "@/context/XMTPProvider";
 
-export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
+export function ChatWindowComponent({ participant1, participant2 }) {
+  const { xmtpClient, isXmtpInitialized } = useXMTP();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const inputRef = useRef(null);
-  console.log("XMTP Client:", xmtpClient);
-  console.log("Recipient Address:", recipientAddress);
-  useEffect(() => {
-    if (!xmtpClient || !recipientAddress) return;
 
-    // Function to load existing messages
+  const recipientAddress =
+    participant1 === xmtpClient?.address ? participant2 : participant1;
+
+  useEffect(() => {
+    if (!xmtpClient || !recipientAddress || !isXmtpInitialized) return;
+
     const loadMessages = async () => {
       try {
         const conversation = await xmtpClient.conversations.newConversation(
           recipientAddress
         );
 
-        // Fetch all messages
         const fetchedMessages = await conversation.messages();
         setMessages(
           fetchedMessages.map((msg) => ({
@@ -45,7 +47,6 @@ export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
           }))
         );
 
-        // Subscribe to new messages
         const stream = await conversation.streamMessages();
         (async () => {
           for await (const msg of stream) {
@@ -75,10 +76,8 @@ export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
       }
     };
 
-
-
     loadMessages();
-  }, [xmtpClient, recipientAddress]);
+  }, [xmtpClient, recipientAddress, isXmtpInitialized]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -89,16 +88,23 @@ export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
         recipientAddress
       );
       await conversation.send(newMessage);
-      setNewMessage(""); 
+      setNewMessage("");
     } catch (error) {
       console.error("Failed to send message:", error);
     }
   };
 
-
   const focusInput = () => {
     inputRef.current?.focus();
   };
+
+  if (!isXmtpInitialized) {
+    return <div>Initializing XMTP...</div>;
+  }
+
+  if (!xmtpClient) {
+    return <div>Failed to initialize XMTP client</div>;
+  }
 
   return (
     <Card className="w-full max-w-2xl mx-auto h-[80vh] flex flex-col">
@@ -107,11 +113,11 @@ export function ChatWindowComponent({ xmtpClient, recipientAddress }) {
           <Avatar className="mr-2">
             <AvatarImage
               src="/placeholder.svg?height=40&width=40&text=JD"
-              alt="John Doe"
+              alt="Chat Partner"
             />
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarFallback>{recipientAddress?.slice(0, 6)}</AvatarFallback>
           </Avatar>
-          John Doe
+          {recipientAddress}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-grow p-0 overflow-auto" onClick={focusInput}>
