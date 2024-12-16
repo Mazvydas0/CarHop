@@ -21,6 +21,16 @@ export const ChatProvider = ({ children }) => {
   }, [chats]);
 
   const createNewChat = (sender, receiver) => {
+    const existingChatId = Object.keys(chats).find(
+      (chatId) =>
+        (chats[chatId].sender === sender && chats[chatId].receiver === receiver) ||
+        (chats[chatId].sender === receiver && chats[chatId].receiver === sender)
+    )
+
+    if(existingChatId){
+      return existingChatId
+    }
+
     const chatId = uuidv4();
 
     setChats((prev) => ({

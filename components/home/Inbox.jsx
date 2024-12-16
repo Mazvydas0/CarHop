@@ -24,35 +24,60 @@ export function Inbox() {
         const conversationList = await xmtpClient.conversations.list();
         const chatPreviews = await Promise.all(
           conversationList.map(async (conversation) => {
-            const messages = await conversation.messages({ limit: 1 });
-            const lastMessage = messages[0]?.content || "No messages yet";
-            const timestamp = messages[0]?.sent || new Date();
-
-            let chatId = Object.keys(chats).find(
-              (id) =>
-                chats[id].sender === conversation.peerAddress ||
-                chats[id].receiver === conversation.peerAddress
+            // Fetch multiple messages and sort to get the latest
+            const messages = await conversation.messages({ limit: 50 });
+            const sortedMessages = messages.sort(
+              (a, b) => new Date(b.sent).getTime() - new Date(a.sent).getTime()
             );
 
+            const lastMessage = sortedMessages[0]?.content || "No messages yet";
+            const timestamp = sortedMessages[0]?.sent || new Date();
+
+            // Check if a chat already exists using the conversation's unique topic or peer addresses
+            let chatId = Object.keys(chats).find(
+              (id) =>
+                (chats[id].sender === conversation.peerAddress &&
+                  chats[id].receiver === xmtpClient.address) ||
+                (chats[id].sender === xmtpClient.address &&
+                  chats[id].receiver === conversation.peerAddress) ||
+                chats[id].topic === conversation.topic
+            );
+
+            // If no existing chat is found, create a new one
             if (!chatId) {
               chatId = createNewChat(
                 xmtpClient.address,
-                conversation.peerAddress
+                conversation.peerAddress,
+                conversation.topic
               );
             }
+            // Log the details for debugging
+            console.log("Chat ID:", chatId);
+            console.log("Recipient Address:", conversation.peerAddress);
+            console.log("Sender Address:", xmtpClient.address);
+            console.log("Last Message:", lastMessage);
+            console.log("Timestamp:", new Date(timestamp).toLocaleTimeString());
+            console.log("Conversation Metadata:", conversation);
 
             return {
               id: chatId,
               recipient: conversation.peerAddress,
               lastMessage,
-              timestamp: new Date(timestamp).toLocaleTimeString(),
+              timestamp: new Date(timestamp).toLocaleString(), // Changed to include date
             };
           })
         );
-        setConversations(chatPreviews);
+
+        // Sort conversations by most recent timestamp
+        const sortedConversations = chatPreviews.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+
+        setConversations(sortedConversations);
       } catch (error) {
         console.error("Error fetching conversations:", error);
-        toast.error("Failed to load conversations.");
+        alert("Failed to load conversations.");
       }
     };
 
@@ -66,12 +91,13 @@ export function Inbox() {
   };
 
   if (!isXmtpInitialized) {
-
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl pb-4 font-semibold text-teal-600">Inbox</h1>
         <Card className="w-full max-w-2xl mx-auto">
-          <CardContent className="p-0 text-center">Initialize XMTP at the Metamask extension...</CardContent>
+          <CardContent className="p-0 text-center">
+            Initialize XMTP at the Metamask extension...
+          </CardContent>
         </Card>
       </div>
     );
