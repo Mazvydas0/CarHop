@@ -27,7 +27,6 @@ contract TripContract {
     mapping(uint256 => mapping(address => uint8)) public passengerRatings; // Ratings given to passengers
     mapping(uint256 => mapping(address => bool))
         public passengerCompletionConfirmation;
-    mapping(address => bool) private hasCompletedTrip;
 
     event TripCancelled(
         uint256 tripId,
@@ -167,7 +166,6 @@ contract TripContract {
             block.timestamp < currentSchedule.pickupTime,
             "Trip has already started or passed"
         );
-
 
         // Process refunds first
         if (passengerCount > 0) {
@@ -317,13 +315,12 @@ contract TripContract {
         );
 
         require(
-            !hasCompletedTrip[msg.sender],
-            "You have already completed the trip"
+            !passengerCompletionConfirmation[_tripId][msg.sender],
+            "You have already confirmed this trip's completion"
         );
 
         // Mark the confirmation
         passengerCompletionConfirmation[_tripId][msg.sender] = true;
-        hasCompletedTrip[msg.sender] = true;
 
         // Check if we have enough confirmations to complete the trip
         uint256 confirmationCount = 0;

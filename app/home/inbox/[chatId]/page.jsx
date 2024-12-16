@@ -4,7 +4,7 @@ import { useChatContext } from "@/context/ChatProvider";
 import { ChatWindowComponent } from "@/components/home/ChatWindow";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function ChatWindow() {
   const { xmtpClient, isXmtpInitialized, initializeXmtp } = useXMTP();
