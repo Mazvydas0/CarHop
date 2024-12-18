@@ -12,8 +12,6 @@ export const useMetaMaskWallet = () => {
   const router = useRouter();
   const { resetXmtp, initializeXmtp } = useXMTP();
 
-  // Use XMTP context methods
-
   useEffect(() => {
     const savedAddress = Cookies.get("walletAddress");
     if (savedAddress) {
@@ -62,13 +60,22 @@ export const useMetaMaskWallet = () => {
     }
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (sdk) {
-      sdk.terminate();
-      setCurrentAccount(null);
-      resetXmtp();
-      Cookies.remove("walletAddress");
-      router.push("/");
+      try {
+        // Terminate the SDK connection
+        await sdk.terminate();
+
+        // Clear local state
+        setCurrentAccount(null);
+        resetXmtp();
+        Cookies.remove("walletAddress");
+
+        // Redirect to landing page
+        router.push("/");
+      } catch (err) {
+        console.warn("Failed to disconnect:", err);
+      }
     }
   };
 

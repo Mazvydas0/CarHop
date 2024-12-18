@@ -25,7 +25,6 @@ export const ConnectWalletButton = () => {
     connect,
     disconnect,
     currentAccount,
-    connected,
     connecting,
     showBubble,
     xmtpClient,
@@ -33,7 +32,7 @@ export const ConnectWalletButton = () => {
 
   return (
     <div className="relative">
-      {connected && currentAccount ? (
+      {currentAccount ? (
         <Popover>
           <PopoverTrigger>
             <Button variant="secondary">{formatAddress(currentAccount)}</Button>
