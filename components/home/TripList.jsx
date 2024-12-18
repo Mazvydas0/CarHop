@@ -1,13 +1,12 @@
-"use client";
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { fetchAllTrips } from "@/utils/tripContractMethods";
 import Link from "next/link";
 import TripCard from "./TripCard";
 
-export default function TripList({ headerText, finished }) {
-  const currentTime = Date.now();
+export default function TripList({ headerText, finished, filters }) {
   const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
   const [provider, setProvider] = useState(null);
 
   useEffect(() => {
@@ -24,6 +23,7 @@ export default function TripList({ headerText, finished }) {
         const trips = await fetchAllTrips(provider);
         console.log("All trips fetched: ", trips);
         setUpcomingTrips(trips);
+        applyFilters(trips);
       } catch (err) {
         console.error("Error fetching trips: ", err);
       }
@@ -32,14 +32,56 @@ export default function TripList({ headerText, finished }) {
     getAllTrips();
   }, [provider]);
 
-  const filteredTrips = upcomingTrips.filter((trip) => {
-    const dropoffTimeMillis = Date.parse(trip.dropoffTime);
-    return finished
-      ? dropoffTimeMillis <= currentTime || trip.completed
-      : dropoffTimeMillis > currentTime && !trip.completed;
-  });
+  useEffect(() => {
+    applyFilters(upcomingTrips);
+  }, [upcomingTrips, filters]);
 
-  console.log("Filtered trips:", filteredTrips);
+  const applyFilters = (trips) => {
+    const filtered = trips.filter((trip) => {
+      const tripPickupDate = trip.pickupTime; // Already a Date object
+      const tripPickupDateString = tripPickupDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // Extract hours and minutes from pickup time
+      const tripHours = tripPickupDate.getHours();
+      const tripMinutes = tripPickupDate.getMinutes();
+      const tripTotalMinutes = tripHours * 60 + tripMinutes; // Total minutes since midnight
+
+      let isFiltered = finished
+        ? tripPickupDate.getTime() <= Date.now() || trip.completed
+        : tripPickupDate.getTime() > Date.now() && !trip.completed;
+
+      if (filters.origin && !trip.pickupLocation.includes(filters.origin)) {
+        isFiltered = false;
+      }
+
+      if (
+        filters.destination &&
+        !trip.dropoffLocation.includes(filters.destination)
+      ) {
+        isFiltered = false;
+      }
+
+      // Filter by date and time
+      if (filters.date) {
+        // Use midnight if no time is specified
+        const filterTime = filters.time || "00:00"; // Default to midnight
+        const filterDate = new Date(`${filters.date}T${filterTime}:00`);
+
+        if (tripPickupDate < filterDate) {
+          isFiltered = false; // Exclude trips happening before the filter date/time
+        }
+      }
+
+      return isFiltered;
+    });
+
+    console.log("Filtered Trips:", filtered);
+    setFilteredTrips(filtered);
+  };
+
+
+
+
 
   return (
     <div>

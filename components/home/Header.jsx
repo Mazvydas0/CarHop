@@ -54,16 +54,6 @@ export function Header() {
               Add a Trip
             </Button>
           </Link>
-          <Link href="/home/findTrip">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-teal-400 hover:text-white"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Search a Trip
-            </Button>
-          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
