@@ -1,18 +1,11 @@
-import { Button } from "@/components/ui/Button";
+
 import Image from "next/image";
-import {
-  Car,
-  Users,
-  LogIn,
-  CarTaxiFront,
-  CarFront,
-  Caravan,
-  CaravanIcon,
-} from "lucide-react";
-import Link from "next/link";
+import {CarFront } from "lucide-react";
 import MetaButton from "../metamask/MetaButton";
+import { RideButtons } from "./RideButtons";
 
 export function CarHopHero() {
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-teal-400 to-blue-500">
       <Image
@@ -37,24 +30,7 @@ export function CarHopHero() {
           Hop in, hop out! Your friendly neighborhood ride-sharing app
         </p>
 
-        <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-          <Link href="/home">
-            <Button size="lg" className="bg-teal-500 hover:bg-teal-600">
-              <Car className="mr-2 h-5 w-5" />
-              Find a Ride
-            </Button>
-          </Link>
-          <Link href="/home">
-            <Button
-              size="lg"
-              variant="outline"
-              className="bg-white/10 text-white hover:bg-white/20"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              Offer a Ride
-            </Button>
-          </Link>
-        </div>
+        <RideButtons />
       </div>
     </div>
   );
