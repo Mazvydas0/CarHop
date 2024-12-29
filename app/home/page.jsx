@@ -19,7 +19,7 @@ export default function HomePage() {
         <div>
           <div>
             <TripList
-              headerText="Past Trips"
+              headerText="Completed Trips"
               finished={true}
               filters={filters}
             />

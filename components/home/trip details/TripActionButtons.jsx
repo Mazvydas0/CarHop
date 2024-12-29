@@ -17,7 +17,11 @@ export default function TripActionButtons({
   return (
     <div className="text-center">
       {bookingStatus.error && (
-        <p className="text-red-500 mb-2">{bookingStatus.error}</p>
+        <p className="text-red-500 mb-2">
+          {bookingStatus.error.length > 100
+            ? "Blockchain issue. Submit a request again after a few moments"
+            : bookingStatus.error}
+        </p>
       )}
       <div className="flex flex-col items-center">
         <div id="trip-booking">

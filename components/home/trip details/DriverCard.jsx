@@ -76,10 +76,6 @@ export default function DriverCard({
             <p className="mt-2 text-gray-600">Vehicle details placeholder</p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Phone className="mr-2 h-4 w-4" />
-              Call
-            </Button>
             <Button variant="outline" size="sm" onClick={handleMessageClick}>
               <MessageCircle className="mr-2 h-4 w-4" />
               Message

@@ -143,7 +143,7 @@ export default function AddTrip() {
           console.log("Error data:", error.data);
         }
 
-        setError(`${errorMessage}`);
+        setError(`There was an issue, try again. ${errorMessage.substring(0, 60)}`);
       } finally {
         setIsLoading(false);
       }
