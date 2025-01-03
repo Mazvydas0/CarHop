@@ -1,232 +1,151 @@
 import { ethers } from "ethers";
 import { tripContractAbi } from "@/lib/TripContractAbi";
+import { ratingContractAbi } from "@/lib/RatingContractAbi";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-const CONTRACT_ABI = tripContractAbi;
+const TRIP_ADDRESS = process.env.NEXT_PUBLIC_TRIP_CONTRACT_ADDRESS;
+const RATING_ADDRESS = process.env.NEXT_PUBLIC_RATING_CONTRACT_ADDRESS;
+
+const getContracts = async (provider) => {
+  const signer = await provider.getSigner();
+  return {
+    tripContract: new ethers.Contract(TRIP_ADDRESS, tripContractAbi, signer),
+    ratingContract: new ethers.Contract(
+      RATING_ADDRESS,
+      ratingContractAbi,
+      signer
+    ),
+  };
+};
 
 export const fetchAllTrips = async (provider) => {
   try {
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    // Get the total number of trips
+    const { tripContract, ratingContract } = await getContracts(provider);
     const tripCount = await tripContract.tripCount();
-    console.log("Total number of trips:", tripCount.toString());
-
     const allTrips = [];
 
-    // Loop through each trip and check if it exists before fetching details
     for (let i = 1; i <= tripCount; i++) {
       try {
         const tripDetails = await tripContract.getTripDetails(i);
         const tripSchedule = await tripContract.getTripSchedule(i);
-        const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
-        const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
-        const [DriverAverageRating, DriverRatingCount] =
-          await tripContract.calculateDriverAverageRating(tripDetails.driver);
+        const [driverRating, driverRatingCount] =
+          await ratingContract.calculateUserAverageRating(tripDetails.driver);
 
-        const formattedTripDetails = {
+        allTrips.push({
           tripId: i.toString(),
           pickupLocation: tripDetails.pickupLocation,
           dropoffLocation: tripDetails.dropoffLocation,
-          pickupTime: pickupTime,
-          dropoffTime: dropoffTime,
+          pickupTime: new Date(Number(tripSchedule[0]) * 1000),
+          dropoffTime: new Date(Number(tripSchedule[1]) * 1000),
           price: ethers.formatEther(tripDetails.price),
           availableSeats: tripDetails.availableSeats.toString(),
           completed: tripDetails.completed,
           driver: tripDetails.driver,
-          driverAverageRating: DriverAverageRating.toString(),
-          driverRatingCount: DriverRatingCount.toString(),
-        };
-
-        allTrips.push(formattedTripDetails);
+          driverAverageRating: driverRating.toString(),
+          driverRatingCount: driverRatingCount.toString(),
+        });
       } catch (error) {
-        console.error(`Error fetching trip details for ID ${i}:`, error);
+        console.error(`Error fetching trip ${i}:`, error);
       }
     }
-
     return allTrips;
   } catch (error) {
-    console.error("Error fetching all trips:", error);
+    console.error("Error fetching trips:", error);
     throw error;
   }
 };
 
 export const fetchOneTrip = async (provider, id) => {
   try {
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
+    const { tripContract, ratingContract } = await getContracts(provider);
+    const [tripDetails, tripSchedule, escrowAmount] = await Promise.all([
+      tripContract.getTripDetails(id),
+      tripContract.getTripSchedule(id),
+      tripContract.escrow(id),
+    ]);
 
-    const tripDetails = await tripContract.getTripDetails(id);
-    const tripSchedule = await tripContract.getTripSchedule(id);
-    const escrowAmount = await tripContract.escrow(id);
-    const pickupTime = new Date(Number(tripSchedule[0]) * 1000);
-    const dropoffTime = new Date(Number(tripSchedule[1]) * 1000);
-    const [DriverAverageRating, DriverRatingCount] =
-      await tripContract.calculateDriverAverageRating(tripDetails.driver);
+    const [driverRating, driverRatingCount] =
+      await ratingContract.calculateUserAverageRating(tripDetails.driver);
 
-    const formattedTripDetails = {
+    return {
       tripId: id,
       pickupLocation: tripDetails.pickupLocation,
       dropoffLocation: tripDetails.dropoffLocation,
-      pickupTime: pickupTime,
-      dropoffTime: dropoffTime,
+      pickupTime: new Date(Number(tripSchedule[0]) * 1000),
+      dropoffTime: new Date(Number(tripSchedule[1]) * 1000),
       price: ethers.formatEther(tripDetails.price),
       availableSeats: tripDetails.availableSeats.toString(),
       completed: tripDetails.completed,
-      isPaid: escrowAmount > 0, // check if there are funds in escrow
+      isPaid: escrowAmount > 0,
       escrowAmount: ethers.formatEther(escrowAmount),
       driver: tripDetails.driver,
-      driverAverageRating: DriverAverageRating.toString(),
-      driverRatingCount: DriverRatingCount.toString(),
+      driverAverageRating: driverRating.toString(),
+      driverRatingCount: driverRatingCount.toString(),
     };
-
-    console.log("Fetched one trip details:", formattedTripDetails);
-    return formattedTripDetails;
   } catch (error) {
-    console.error("Error fetching one trips:", error);
+    console.error("Error fetching trip:", error);
     throw error;
   }
 };
 
 export const bookTrip = async (provider, tripId, price) => {
+  if (!provider || !tripId || !price || isNaN(parseFloat(price))) {
+    throw new Error("Invalid parameters for booking");
+  }
+
+  const { tripContract } = await getContracts(provider);
+  const priceInWei = ethers.parseEther(price.toString());
+
   try {
-    // Validate parameters
-    if (!provider) {
-      throw new Error("Provider is required");
-    }
-    if (!tripId) {
-      throw new Error("Trip ID is required");
-    }
-    if (!price || typeof price !== "string") {
-      throw new Error("Price must be a valid string value");
-    }
-    // Validate that price is a proper number string
-    if (isNaN(parseFloat(price))) {
-      throw new Error("Price must be a valid number");
-    }
-
-    const signer = await provider.getSigner();
-    const signerAddress = await signer.getAddress();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    // Detailed logging
-    console.log("Booking Trip Debug Info:", {
-      signerAddress,
-      tripId,
-      price,
-      contractAddress: CONTRACT_ADDRESS,
-    });
-
-    // Convert the price from POL to Wei
-    const priceInWei = ethers.parseEther(price.toString());
-
-    // Call the bookTrip function with the required payment
-    const tx = await tripContract.bookTrip(tripId, {
-      value: priceInWei,
-    });
-
-    // Wait for the transaction to be mined
+    const tx = await tripContract.bookTrip(tripId, { value: priceInWei });
     const receipt = await tx.wait();
 
-    // Check if the transaction was successful
-    if (receipt.status === 1) {
-      // Get the TripBooked event from the transaction receipt
-      const tripBookedEvent = receipt.logs.find((log) => {
-        try {
-          const parsedLog = tripContract.interface.parseLog(log);
-          return parsedLog.name === "TripBooked";
-        } catch {
-          return false;
-        }
-      });
-
-      if (tripBookedEvent) {
-        const [bookingTripId, passenger, amount] = tripBookedEvent.args;
-
-        return {
-          success: true,
-          tripId: bookingTripId.toString(),
-          passenger,
-          amount: ethers.formatEther(amount),
-          transactionHash: receipt.transactionHash,
-        };
+    const event = receipt.logs.find((log) => {
+      try {
+        return tripContract.interface.parseLog(log).name === "TripBooked";
+      } catch {
+        return false;
       }
-    }
-
-    throw new Error("Transaction failed");
-  } catch (error) {
-    // Comprehensive error logging
-    console.error("Full Booking Error:", {
-      message: error.message,
-      code: error.code,
-      reason: error.reason,
-      name: error.name,
-      stack: error.stack,
-      fullError: error,
     });
 
-    // Handle specific error cases
-    if (error.message.includes("Already booked this trip")) {
-      throw new Error("You have already booked this trip");
-    } else if (error.message.includes("No seats available")) {
-      throw new Error("No seats available for this trip");
-    } else if (error.message.includes("Trip pickup time has passed")) {
-      throw new Error("This trip's pickup time has already passed");
-    } else if (error.message.includes("Incorrect payment amount")) {
-      throw new Error("Incorrect payment amount provided");
-    } else if (error.message.includes("Driver cannot book their own trip")) {
-      throw new Error("You cannot book your own trip as the driver");
+    if (event) {
+      const [bookingTripId, passenger, amount] = event.args;
+      return {
+        success: true,
+        tripId: bookingTripId.toString(),
+        passenger,
+        amount: ethers.formatEther(amount),
+        transactionHash: receipt.transactionHash,
+      };
     }
-    throw error;
+    throw new Error("Transaction failed");
+  } catch (error) {
+    handleBookingError(error);
   }
 };
 
-// Function to complete a trip
-export const completeTrip = async (tripId, provider) => {
+export const completeTrip = async (provider, tripId) => {
   try {
     if (!provider) {
       throw new Error("Provider is required");
     }
 
-    // Request accounts
     if (typeof window.ethereum !== "undefined") {
       await window.ethereum.request({ method: "eth_requestAccounts" });
     } else {
       throw new Error("MetaMask is not installed.");
     }
 
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
+    const { tripContract } = await getContracts(provider);
 
-    // Check escrow balance first
     const escrowAmount = await tripContract.escrow(tripId);
     if (escrowAmount.toString() === "0") {
       throw new Error("Trip has not been paid for yet");
     }
 
-    // Get trip schedule to check dropoff time
     const schedule = await tripContract.getTripSchedule(tripId);
-    const currentTime = Math.floor(Date.now() / 1000); // Convert to Unix timestamp
+    const currentTime = Math.floor(Date.now() / 1000);
 
     if (currentTime < Number(schedule[1])) {
-      // schedule[1] is dropoffTime
       throw new Error("Cannot complete trip before dropoff time");
     }
 
@@ -244,8 +163,142 @@ export const completeTrip = async (tripId, provider) => {
     }
     if (error.message.includes("Trip not yet complete")) {
       throw new Error("Cannot complete trip before dropoff time");
+    } else {
+      throw new Error(
+        `There was some issue with blockchain, try again in few minutes. Error: ${error.message}`
+      );
     }
-    throw error;
+  }
+};
+
+export const rescheduleTrip = async (
+  provider,
+  tripId,
+  newPickupTime,
+  newDropoffTime
+) => {
+  try {
+    if (!provider) {
+      throw new Error("Provider is required");
+    }
+    if (!tripId) {
+      throw new Error("Trip ID is required");
+    }
+    if (!newPickupTime || !newDropoffTime) {
+      throw new Error("New pickup and dropoff times are required");
+    }
+
+    const pickupTimestamp = Math.floor(
+      new Date(newPickupTime).getTime() / 1000
+    );
+    const dropoffTimestamp = Math.floor(
+      new Date(newDropoffTime).getTime() / 1000
+    );
+
+    const { tripContract } = await getContracts(provider);
+
+    const tx = await tripContract.updateTripSchedule(
+      tripId,
+      pickupTimestamp,
+      dropoffTimestamp
+    );
+
+    const receipt = await tx.wait();
+
+    return {
+      success: true,
+      tripId,
+      newPickupTime: new Date(pickupTimestamp * 1000),
+      newDropoffTime: new Date(dropoffTimestamp * 1000),
+      transactionHash: receipt.transactionHash,
+    };
+  } catch (error) {
+    if (error.message.includes("Trip has already started or passed")) {
+      throw new Error("Cannot reschedule a trip that has already started");
+    }
+    if (error.message.includes("Trip schedule is not flexible")) {
+      throw new Error("This trip's schedule cannot be modified");
+    }
+    if (error.message.includes("New pickup time must be in the future")) {
+      throw new Error("New pickup time must be in the future");
+    }
+    if (error.message.includes("New dropoff time must be after pickup time")) {
+      throw new Error("Dropoff time must be after pickup time");
+    } else {
+      throw new Error(
+        `There was some issue with blockchain, try again in few minutes. Error: ${error.message}`
+      );
+    }
+  }
+};
+
+export const cancelTrip = async (provider, tripId) => {
+  try {
+    if (!provider) {
+      throw new Error("Provider is required");
+    }
+    if (!tripId) {
+      throw new Error("Trip ID is required");
+    }
+
+    const { tripContract } = await getContracts(provider);
+
+    const tx = await tripContract.cancelTrip(tripId);
+    const receipt = await tx.wait();
+
+    return {
+      success: true,
+      tripId,
+      transactionHash: receipt.transactionHash,
+    };
+  } catch (error) {
+    if (error.message.includes("Trip does not exist")) {
+      throw new Error("Trip does not exist");
+    }
+    if (error.message.includes("Not the driver")) {
+      throw new Error("Only the trip driver can cancel this trip");
+    }
+    if (error.message.includes("Trip already completed")) {
+      throw new Error("Cannot cancel a completed trip");
+    } else {
+      throw new Error(`There was some issue with blockchain, try again in few minutes. Error: ${error.message}`);
+    }
+  }
+};
+
+export const cancelBooking = async (provider, tripId) => {
+  try {
+    if (!provider) {
+      throw new Error("Provider is required");
+    }
+    if (!tripId) {
+      throw new Error("Trip ID is required");
+    }
+
+    const { tripContract } = await getContracts(provider);
+
+    const tx = await tripContract.cancelBooking(tripId);
+    const receipt = await tx.wait();
+
+    return {
+      success: true,
+      tripId,
+      transactionHash: receipt.transactionHash,
+    };
+  } catch (error) {
+    if (error.message.includes("Too late to cancel")) {
+      throw new Error("Cannot cancel booking - pickup time has passed");
+    }
+    if (error.message.includes("Trip does not exist")) {
+      throw new Error("Trip does not exist");
+    }
+    if (error.message.includes("Not a passenger")) {
+      throw new Error("You are not a passenger on this trip");
+    } else {
+      throw new Error(
+        `There was some issue with blockchain, try again in few minutes. Error: ${error.message}`
+      );
+    }
   }
 };
 
@@ -254,19 +307,12 @@ export const fetchTripPassengers = async (provider, tripId) => {
     if (!provider) {
       throw new Error("Provider is required");
     }
-    if (tripId === undefined) {
+    if (!tripId) {
       throw new Error("Trip ID is required");
     }
 
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
+    const { tripContract } = await getContracts(provider);
     const passengers = await tripContract.getTripPassengers(tripId);
-    console.log("Fetched passengers:", passengers);
 
     const formattedPassengers = await Promise.all(
       passengers.map(async (passenger) => {
@@ -299,144 +345,53 @@ export const fetchTripPassengers = async (provider, tripId) => {
   }
 };
 
-export const rescheduleTrip = async (
-  provider,
-  tripId,
-  newPickupTime,
-  newDropoffTime
-) => {
+export const rateDriver = async (provider, tripId, rating) => {
   try {
-    console.log("new ", newPickupTime, newDropoffTime);
-    if (!provider) {
-      throw new Error("Provider is required");
-    }
-    if (!tripId) {
-      throw new Error("Trip ID is required");
-    }
-    if (!newPickupTime || !newDropoffTime) {
-      throw new Error("New pickup and dropoff times are required");
-    }
-
-    const pickupTimestamp = Math.floor(
-      new Date(newPickupTime).getTime() / 1000
-    );
-    const dropoffTimestamp = Math.floor(
-      new Date(newDropoffTime).getTime() / 1000
-    );
-
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    const tx = await tripContract.updateTripSchedule(
-      tripId,
-      pickupTimestamp,
-      dropoffTimestamp
-    );
-
+    const { tripContract } = await getContracts(provider);
+    const tx = await tripContract.rateDriver(tripId, rating);
     const receipt = await tx.wait();
-
-    return {
-      success: true,
-      tripId,
-      newPickupTime: new Date(pickupTimestamp * 1000),
-      newDropoffTime: new Date(dropoffTimestamp * 1000),
-      transactionHash: receipt.transactionHash,
-    };
+    return { success: true, transactionHash: receipt.transactionHash };
   } catch (error) {
-    if (error.message.includes("Trip has already started or passed")) {
-      throw new Error("Cannot reschedule a trip that has already started");
-    }
-    if (error.message.includes("Trip schedule is not flexible")) {
-      throw new Error("This trip's schedule cannot be modified");
-    }
-    if (error.message.includes("New pickup time must be in the future")) {
-      throw new Error("New pickup time must be in the future");
-    }
-    if (error.message.includes("New dropoff time must be after pickup time")) {
-      throw new Error("Dropoff time must be after pickup time");
-    }
-    throw error;
+    handleRatingError(error);
   }
 };
 
-export const cancelTrip = async (provider, tripId) => {
+export const ratePassengers = async (provider, tripId, passengers, ratings) => {
   try {
-    if (!provider) {
-      throw new Error("Provider is required");
-    }
-    if (!tripId) {
-      throw new Error("Trip ID is required");
-    }
-
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    const tx = await tripContract.cancelTrip(tripId);
-
+    const { tripContract } = await getContracts(provider);
+    const tx = await tripContract.ratePassengers(tripId, passengers, ratings);
     const receipt = await tx.wait();
-
-    return {
-      success: true,
-      tripId,
-      transactionHash: receipt.transactionHash,
-    };
+    return { success: true, transactionHash: receipt.transactionHash };
   } catch (error) {
-    if (error.message.includes("Trip does not exist")) {
-      throw new Error("Trip does not exist");
-    }
-    if (error.message.includes("Not the driver")) {
-      throw new Error("Only the trip driver can cancel this trip");
-    }
-    if (error.message.includes("Trip already completed")) {
-      throw new Error("Cannot cancel a completed trip");
-    }
-    throw error;
+    handleRatingError(error);
   }
 };
 
-export const cancelBooking = async (provider, tripId) => {
-  try {
-    if (!provider) {
-      throw new Error("Provider is required");
-    }
-    if (!tripId) {
-      throw new Error("Trip ID is required");
-    }
+const handleBookingError = (error) => {
+  const errorMessages = {
+    "Already booked this trip": "You have already booked this trip",
+    "No seats available": "No seats available for this trip",
+    "Trip pickup time has passed": "This trip's pickup time has already passed",
+    "Incorrect payment amount": "Incorrect payment amount provided",
+    "Driver cannot book their own trip":
+      "You cannot book your own trip as the driver",
+  };
 
-    const signer = await provider.getSigner();
-    const tripContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    const tx = await tripContract.cancelBooking(tripId);
-
-    const receipt = await tx.wait();
-
-    return {
-      success: true,
-      tripId,
-      transactionHash: receipt.transactionHash,
-    };
-  } catch (error) {
-    if (error.message.includes("Too late to cancel")) {
-      throw new Error("Cannot cancel booking - pickup time has passed");
-    }
-    if (error.message.includes("Trip does not exist")) {
-      throw new Error("Trip does not exist");
-    }
-    if (error.message.includes("Not a passenger")) {
-      throw new Error("You are not a passenger on this trip");
-    }
-    throw error;
+  for (const [key, message] of Object.entries(errorMessages)) {
+    if (error.message.includes(key)) throw new Error(message);
   }
+  throw error;
+};
+
+const handleRatingError = (error) => {
+  const errorMessages = {
+    "Trip not completed": "Cannot rate before trip completion",
+    "Invalid rating": "Rating must be between 1 and 5",
+    "Already rated": "You have already rated for this trip",
+  };
+
+  for (const [key, message] of Object.entries(errorMessages)) {
+    if (error.message.includes(key)) throw new Error(message);
+  }
+  throw error;
 };

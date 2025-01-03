@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import './RatingContract.sol';
+
 contract TripContract {
+    RatingContract public ratingContract;
+    
     struct TripSchedule {
-        uint256 pickupTime; // Unix timestamp for pickup
-        uint256 dropoffTime; // Unix timestamp for dropoff
-        bool isFlexible; // If true, times are approximate
+        uint256 pickupTime;
+        uint256 dropoffTime;
+        bool isFlexible;
     }
 
     struct Trip {
-        address driver; // Driver's address
-        string pickupLocation; // Pickup location
-        string dropoffLocation; // Dropoff location
-        uint256 price; // Price per seat in tokens
-        uint256 availableSeats; // Number of available seats
-        bool completed; // Whether the trip is completed
-        address[] passengers; // List of passengers
-        mapping(address => uint8) ratings; // Ratings given by passengers
+        address driver;
+        string pickupLocation;
+        string dropoffLocation;
+        uint256 price;
+        uint256 availableSeats;
+        bool completed;
+        address[] passengers;
     }
 
     uint256 public tripCount;
@@ -24,9 +27,7 @@ contract TripContract {
     mapping(uint256 => TripSchedule) public tripSchedules;
     mapping(uint256 => mapping(address => bool)) public isBooked;
     mapping(uint256 => uint256) public escrow;
-    mapping(uint256 => mapping(address => uint8)) public passengerRatings; // Ratings given to passengers
-    mapping(uint256 => mapping(address => bool))
-        public passengerCompletionConfirmation;
+    mapping(uint256 => mapping(address => bool)) public passengerCompletionConfirmation;
 
     event TripCancelled(
         uint256 tripId,
@@ -67,6 +68,10 @@ contract TripContract {
 
     event RefundFailed(uint256 tripId, address passenger);
     bool private locked;
+
+    constructor(address _ratingContract) {
+        ratingContract = RatingContract(_ratingContract);
+    }
 
     modifier noReentrant() {
         require(!locked, "Reentrant call");
@@ -387,29 +392,22 @@ contract TripContract {
         emit TripCompleted(_tripId, trip.driver);
     }
 
-    function rateDriver(
-        uint256 _tripId,
-        uint8 _rating
-    ) public onlyPassenger(_tripId) tripExists(_tripId) {
+    function rateDriver(uint256 _tripId, uint8 _rating) public onlyPassenger(_tripId) tripExists(_tripId) {
         Trip storage trip = trips[_tripId];
         require(trip.completed, "Trip not completed");
         require(_rating > 0 && _rating <= 5, "Invalid rating");
 
-        trip.ratings[msg.sender] = _rating;
-
-        emit RatedDriver(_tripId, msg.sender, _rating);
+        ratingContract.rateDriver(_tripId, trip.driver, _rating, msg.sender);
     }
 
-    function ratePassengers(
-        uint256 _tripId,
-        address[] calldata _passengers,
-        uint8[] calldata _ratings
-    ) public onlyDriver(_tripId) tripExists(_tripId) {
+
+    function ratePassengers(uint256 _tripId, address[] calldata _passengers, uint8[] calldata _ratings) 
+        public 
+        onlyDriver(_tripId) 
+        tripExists(_tripId) 
+    {
         require(_passengers.length > 0, "No passengers provided");
-        require(
-            _passengers.length == _ratings.length,
-            "Passengers and ratings length mismatch"
-        );
+        require(_passengers.length == _ratings.length, "Passengers and ratings length mismatch");
 
         Trip storage trip = trips[_tripId];
         require(trip.completed, "Trip not completed");
@@ -418,15 +416,10 @@ contract TripContract {
             address passenger = _passengers[i];
             uint8 rating = _ratings[i];
 
-            require(
-                isBooked[_tripId][passenger],
-                "Not a passenger of this trip"
-            );
+            require(isBooked[_tripId][passenger], "Not a passenger of this trip");
             require(rating > 0 && rating <= 5, "Invalid rating");
 
-            passengerRatings[_tripId][passenger] = rating;
-
-            emit PassengerRated(_tripId, passenger, rating);
+            ratingContract.ratePassenger(_tripId, passenger, rating, msg.sender);
         }
     }
 
@@ -472,86 +465,6 @@ contract TripContract {
         uint256 _tripId
     ) public view tripExists(_tripId) returns (address[] memory) {
         return trips[_tripId].passengers;
-    }
-
-    function calculateDriverAverageRating(
-        address _driver
-    ) public view returns (uint256, uint256) {
-        uint256 totalRatings = 0;
-        uint256 ratingCount = 0;
-
-        for (uint256 i = 1; i <= tripCount; i++) {
-            // Check ratings if trip is completed
-            if (trips[i].completed) {
-                // Check if this trip's driver rated this address as a passenger
-                uint8 passengerRating = passengerRatings[i][_driver];
-
-                if (passengerRating > 0) {
-                    totalRatings += passengerRating;
-                    ratingCount++;
-                }
-
-                // Check if some passenger rated this driver when they were a driver
-                for (uint256 j = 0; j < trips[i].passengers.length; j++) {
-                    uint8 driverRating = trips[i].ratings[
-                        trips[i].passengers[j]
-                    ];
-                    if (driverRating > 0 && trips[i].driver == _driver) {
-                        totalRatings += driverRating;
-                        ratingCount++;
-                    }
-                }
-            }
-        }
-
-        uint256 averageRating = ratingCount > 0
-            ? (totalRatings * 100) / ratingCount
-            : 0;
-        return (averageRating, ratingCount);
-    }
-
-    function calculatePassengerAverageRating(
-        address _passenger
-    ) public view returns (uint256, uint256) {
-        uint256 totalRatings = 0;
-        uint256 ratingCount = 0;
-
-        for (uint256 i = 1; i <= tripCount; i++) {
-            if (trips[i].completed) {
-                bool passengerWasOnTrip = false;
-                for (uint256 j = 0; j < trips[i].passengers.length; j++) {
-                    if (trips[i].passengers[j] == _passenger) {
-                        passengerWasOnTrip = true;
-                        break;
-                    }
-                }
-
-                if (passengerWasOnTrip) {
-                    uint8 rating = passengerRatings[i][_passenger];
-                    if (rating > 0) {
-                        totalRatings += rating;
-                        ratingCount++;
-                    }
-                }
-
-                if (trips[i].driver == _passenger) {
-                    for (uint256 j = 0; j < trips[i].passengers.length; j++) {
-                        uint8 driverRating = trips[i].ratings[
-                            trips[i].passengers[j]
-                        ];
-                        if (driverRating > 0) {
-                            totalRatings += driverRating;
-                            ratingCount++;
-                        }
-                    }
-                }
-            }
-        }
-
-        uint256 averageRating = ratingCount > 0
-            ? (totalRatings * 100) / ratingCount
-            : 0;
-        return (averageRating, ratingCount);
     }
 
     receive() external payable {}

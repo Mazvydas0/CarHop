@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { tripContractAbi } from "@/lib/TripContractAbi";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_TRIP_CONTRACT_ADDRESS;
 const CONTRACT_ABI = tripContractAbi;
 
 export default function AddTrip() {
@@ -143,7 +143,7 @@ export default function AddTrip() {
           console.log("Error data:", error.data);
         }
 
-        setError(`There was an issue, try again. ${errorMessage.substring(0, 60)}`);
+        setError(`There was an issue with blockchain, try again in a few minutes. ${errorMessage.substring(0, 60)}`);
       } finally {
         setIsLoading(false);
       }

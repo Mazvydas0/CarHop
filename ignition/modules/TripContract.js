@@ -1,10 +1,9 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
 module.exports = buildModule("TripContractModule", (m) => {
-  // Deploy the Carpool contract
-  const carpoolContract = m.contract("TripContract");
+  const ratingContractAddress = process.env.NEXT_PUBLIC_RATING_CONTRACT_ADDRESS;
 
-  return {
-    carpoolContract,
-  };
+  const tripContract = m.contract("TripContract", [ratingContractAddress]);
+
+  return { tripContract };
 });

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { tripContractAbi } from "@/lib/TripContractAbi";
+import { ratingContractAbi } from "@/lib/RatingContractAbi";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-const CONTRACT_ABI = tripContractAbi;
+const RATING_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_RATING_CONTRACT_ADDRESS;
+const CONTRACT_ABI = ratingContractAbi;
 
 export const useTripRatings = (provider, tripId, trip) => {
   const [ratings, setRatings] = useState({});
@@ -27,11 +27,22 @@ export const useTripRatings = (provider, tripId, trip) => {
       return;
     }
 
+    // Check if the trip is completed
+    if (!trip?.completed) {
+      alert("Ratings cannot be submitted for a non completed trip.");
+      setRatingStatus({
+        loading: false,
+        error: "Trip is not yet completed",
+        success: false,
+      });
+      return;
+    }
+
     try {
       setRatingStatus({ loading: true, error: null, success: false });
       const signer = await provider.getSigner();
-      const tripContract = new ethers.Contract(
-        CONTRACT_ADDRESS,
+      const ratingContract = new ethers.Contract(
+        RATING_CONTRACT_ADDRESS,
         CONTRACT_ABI,
         signer
       );
@@ -53,22 +64,21 @@ export const useTripRatings = (provider, tripId, trip) => {
 
       // Rate driver if a driver rating exists
       if (driverRating) {
-        const driverTx = await tripContract.rateDriver(
+        const driverTx = await ratingContract.rateDriver(
           tripId,
-          driverRating.rating
+          trip.driver,
+          driverRating.rating,
+          signer.getAddress()
         );
         await driverTx.wait();
       }
 
-      // Rate passengers if any passenger ratings exist
-      if (passengerRatings.length > 0) {
-        const passengerAddresses = passengerRatings.map((r) => r.address);
-        const passengerRatingValues = passengerRatings.map((r) => r.rating);
-
-        const passengerTx = await tripContract.ratePassengers(
+      for (const passengerRating of passengerRatings) {
+        const passengerTx = await ratingContract.ratePassenger(
           tripId,
-          passengerAddresses,
-          passengerRatingValues
+          passengerRating.address,
+          passengerRating.rating,
+          trip.driver
         );
         await passengerTx.wait();
       }
