@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Users, Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import MessageButton from "./MessageButton";
 
 export default function PassengersList({
   driver,
@@ -94,6 +95,7 @@ export default function PassengersList({
                           )}
                         </div>
                         <div className="flex items-center space-x-2">
+                          <MessageButton recipientAddress={passenger.address} />
                           <Input
                             type="number"
                             min="1"

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { useChatContext } from "@/context/ChatProvider";
 import { useXMTP } from "@/context/XMTPProvider";
+import MessageButton from "./MessageButton";
 
 export default function DriverCard({
   driver,
@@ -55,7 +56,7 @@ export default function DriverCard({
       <CardContent className="p-6">
         <div className="flex flex-col items-center space-y-4 md:flex-row md:space-x-6 md:space-y-0">
           <Image
-            src="/images/noProfile.png"
+            src="/images/profilePic.jpg"
             alt="Driver"
             width={100}
             height={100}
@@ -76,10 +77,7 @@ export default function DriverCard({
             <p className="mt-2 text-gray-600">Vehicle details placeholder</p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={handleMessageClick}>
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Message
-            </Button>
+            <MessageButton recipientAddress={driver} />
           </div>
         </div>
       </CardContent>

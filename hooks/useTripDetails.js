@@ -127,7 +127,7 @@ export const useTripActions = (provider, tripId, trip) => {
     setCompleteStatus({ loading: true, error: null });
 
     try {
-      await completeTrip(tripId, provider);
+      await completeTrip(provider, tripId);
       setCompleteStatus({ loading: false, error: null });
       alert("Trip completed successfully!");
     } catch (error) {
