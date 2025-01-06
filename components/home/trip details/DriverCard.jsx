@@ -56,7 +56,7 @@ export default function DriverCard({
       <CardContent className="p-6">
         <div className="flex flex-col items-center space-y-4 md:flex-row md:space-x-6 md:space-y-0">
           <Image
-            src="/images/profilePic.jpg"
+            src="/images/ProfilePic.jpg"
             alt="Driver"
             width={100}
             height={100}
