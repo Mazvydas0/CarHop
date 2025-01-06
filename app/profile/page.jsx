@@ -1,6 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 
 export default function Profile() {
@@ -11,7 +11,8 @@ export default function Profile() {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Work in Progress</AlertTitle>
         <AlertDescription>
-          We're currently working on this page. Check back soon for updates!
+          We&apos;re currently working on this page. Check back soon for
+          updates!
         </AlertDescription>
       </Alert>
       <div className="mt-8">
