@@ -34,8 +34,12 @@ export const ConnectWalletButton = () => {
     <div className="relative">
       {currentAccount ? (
         <Popover>
-          <PopoverTrigger>
-            <Button variant="secondary">{formatAddress(currentAccount)}</Button>
+          <PopoverTrigger asChild>
+            <div>
+              <Button variant="secondary">
+                {formatAddress(currentAccount)}
+              </Button>
+            </div>
           </PopoverTrigger>
           <PopoverContent className="mt-2 w-44 bg-gray-100 border rounded-md shadow-lg right-5 z-10 top-[14px] relative">
             <div className="absolute -top-2 right-12 w-4 h-4 bg-gray-100 border-t border-l border-gray-300 transform rotate-45"></div>

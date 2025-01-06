@@ -50,13 +50,20 @@ export default function TripList({ headerText, finished, filters }) {
         ? tripPickupDate.getTime() <= Date.now() || trip.completed
         : tripPickupDate.getTime() > Date.now() && !trip.completed;
 
-      if (filters.origin && !trip.pickupLocation.includes(filters.origin)) {
+      if (
+        filters.origin &&
+        !trip.pickupLocation
+          .toLowerCase()
+          .includes(filters.origin.toLowerCase())
+      ) {
         isFiltered = false;
       }
 
       if (
         filters.destination &&
-        !trip.dropoffLocation.includes(filters.destination)
+        !trip.dropoffLocation
+          .toLowerCase()
+          .includes(filters.destination.toLowerCase())
       ) {
         isFiltered = false;
       }

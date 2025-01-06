@@ -311,14 +311,14 @@ export const fetchTripPassengers = async (provider, tripId) => {
       throw new Error("Trip ID is required");
     }
 
-    const { tripContract } = await getContracts(provider);
+    const { tripContract, ratingContract } = await getContracts(provider);
     const passengers = await tripContract.getTripPassengers(tripId);
 
     const formattedPassengers = await Promise.all(
       passengers.map(async (passenger) => {
         try {
           const [PassengerAverageRating, PassengerRatingCount] =
-            await tripContract.calculatePassengerAverageRating(passenger);
+            await ratingContract.calculateUserAverageRating(passenger);
 
           return {
             address: passenger,
